@@ -4,9 +4,10 @@
 
 install-solana:
 	sh -c "$(curl -sSfL https://release.solana.com/v1.7.8/install)"
+	. /home/$USER/.profile
 
 start-solana:
-	mkdir -p localnet/ledger
+	mkdir -pv localnet/ledger
 	solana-test-validator -r --ledger localnet/ledger
 
 clean:
