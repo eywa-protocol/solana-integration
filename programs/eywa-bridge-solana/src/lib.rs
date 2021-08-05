@@ -1,25 +1,18 @@
 // use anchor_lang::prelude::*;
 use anchor_lang::{
     prelude::*,
-    Key,
-    // solana_program,
     solana_program::{
-        entrypoint::ProgramResult,
+        // entrypoint::ProgramResult,
         program_error::ProgramError,
-        // program_pack::Pack,
     },
     // AccountSerialize,
     // AccountDeserialize,
     // spl_token,
-    // solana_program::
 };
 // use anchor_spl::token as anchor_spl_token;
-use spl_token::{
-    // id as spl_token_id,
-    ID as SPL_TOKEN_PID,
-    // state::Mint,
-};
-// use crate::id as PID;
+// use spl_token::{
+//     ID as SPL_TOKEN_PID,
+// };
 
 #[program]
 pub mod eywa_bridge_solana {
@@ -30,6 +23,10 @@ pub mod eywa_bridge_solana {
     pub struct Settings {
         pub owner: Pubkey,
         pub param: u64,
+
+        // address public _listNode;
+        // uint256 public requestCount = 1;
+
     }
     impl Settings {
         pub fn new(ctx: Context<Auth>) -> Result<Self> {
@@ -92,6 +89,8 @@ pub mod eywa_bridge_solana {
         Ok(())
     }
 
+// #region Syntesise
+
     pub fn create_representation(
         ctx: Context<CreateRepresentation>,
         token_real: [u8; 20], // String, // H160, // real token for synt
@@ -108,35 +107,92 @@ pub mod eywa_bridge_solana {
         ctx.accounts.mint_data.token_synt = token_synt; // ctx.accounts.mint.key();
         ctx.accounts.mint_data.decimals = synt_decimals;
 
-        // // The `InitializeMint` instruction requires no signers and MUST be
-        // // included within the same Transaction as the system program's
-        // // `CreateAccount` instruction that creates the account being initialized.
-        // // Otherwise another party can acquire ownership of the uninitialized
-        // // account.
-        // let ix_init_mint = &spl_token::instruction::initialize_mint(
-        //     &SPL_TOKEN_PID, // &spl_token_id(),
-        //     &ctx.accounts.mint.key(),
-        //     &ctx.accounts.owner.key(),
-        //     Some(&ctx.accounts.owner.key()),
-        //     2, // decimals: u8,
-        // )?;
-        // // solana_program::program::invoke_signed(
-        // solana_program::program::invoke(
-        //     &ix_init_mint,
-        //     //   0. `[writable]` The mint to initialize.
-        //     //   1. `[]` Rent sysvar
-        //     &[
-        //         ctx.accounts.mint.clone(),
-        //         ctx.accounts.rent.to_account_info(),
-        //     ],
-        //     // ctx.signer_seeds, //&[],
-        // )?;
-        // msg!("000");
-        // // let (pda, _bump_seed) = Pubkey::find_program_address(&[b"escrow"], ctx.program_id);
-        // // token::set_authority(ctx.accounts.into(), AuthorityType::AccountOwner, Some(pda))?;
+        Ok(())
+    }
+
+// #endregion Syntesise
+// #region Portal
+
+    pub fn synthesize(
+        ctx: Context<Synthesize>,
+        token_id: Pubkey,
+        token_real: [u8; 20], // String, // H160, // real token for synt
+        token_synt: Pubkey,
+        amount: u64,
+
+        // address _chain2address,
+        // address _receiveSide,
+        // address _oppositeBridge,
+        // uint _chainID
+
+    ) -> ProgramResult {
+        // let token_real = ctx.accounts.mint_data.token_real;
+        let message = "Portal synthesize";
+        // let message = format!(
+        //     "EmergencyUnburn: tx_id={:?}, token_real={:?}",
+        //     tx_id, token_real,
+        // );
+        msg!("{}", message);
+
+        /*
+        // Залочить SPLки
+        TransferHelper.safeTransferFrom(_token, _msgSender(), address(this), _amount);
+        // Запомнить состояние
+        balanceOf[_token] = balanceOf[_token].add(_amount);
+
+        // посчитать внутренний идентификатор
+        txID = keccak256(abi.encodePacked(this, requestCount));
+
+        // сгенерировать вызов
+        bytes memory out  = abi.encodeWithSelector(bytes4(
+            keccak256(bytes('mintSyntheticToken(bytes32,address,uint256,address)'))
+        ), txID, _token, _amount, _chain2address);
+        // и передать наружу бэкенду
+        IBridge(bridge).transmitRequestV2(out,_receiveSide, _oppositeBridge, _chainID);
+        //  transmitRequestV2(
+                bytes memory _selector,
+                address receiveSide,
+                address oppositeBridge,
+                uint chainId
+            ) onlyTrustedDex
+        bytes32 requestId = prepareRqId(_selector, receiveSide, oppositeBridge, chainId);
+        //  function prepareRqId(
+                bytes memory  _selector,
+                address receiveSide,
+                address oppositeBridge,
+                uint chainId
+            )
+        bytes32 requestId = keccak256(
+            abi.encodePacked(this, nonce[oppositeBridge], _selector, receiveSide, oppositeBridge, chainId));
+        nonce[oppositeBridge] = nonce[oppositeBridge] + 1;
+
+        emit!(EvOracleRequest {
+            "setRequest",
+            address(this),
+            requestId,
+            _selector,
+            receiveSide,
+            oppositeBridge,
+            chainId,
+        });
+        // end transmitRequestV2
+        TxState storage txState = requests[txID];
+        txState.recipient    = _msgSender();
+        txState.chain2address    = _chain2address;
+        txState.rtoken     = _token;
+        txState.amount     = _amount;
+        txState.state = RequestState.Sent;
+
+        requestCount +=1;
+
+        emit EvSynthesizeRequest(txID, _msgSender(), _chain2address, _amount, _token);
+        */
 
         Ok(())
     }
+
+// #endregion Portal
+
 }
 
 // #region Events
@@ -147,6 +203,47 @@ pub struct MyEvent {
     #[index]
     pub label: String,
 }
+
+// #region Bridge
+
+    /*
+        event OracleRequest(
+            string  requestType,
+            address bridge,
+            bytes32 requestId,
+            bytes   selector,
+            address receiveSide,
+            address oppositeBridge,
+            uint chainid
+        );
+    */
+    #[event]
+    pub struct EvOracleRequest {
+    }
+
+// #endregion Bridge
+// #region Portal
+
+    /*
+        event SynthesizeRequest(
+            bytes32 indexed _id,
+            address indexed _from,
+            address indexed _to,
+            uint _amount,
+            address _token
+        );
+    */
+    #[event]
+    pub struct EvSynthesizeRequest {
+        #[index]
+        tx_id: [u8; 32],   // H256, // id for repley protection
+        // address indexed _from, // msgSender
+        // address indexed _to, // chain2address
+        // amount: u64,
+        // address _token
+    }
+
+// #endregion Portal
 
 // #endregion Events
 // #region DataAccounts
@@ -262,12 +359,57 @@ pub struct CreateRepresentation<'info> {
     pub owner: AccountInfo<'info>,
 }
 
+#[derive(Accounts)]
+pub struct MintSyntheticToken<'info> {
+    #[account(mut)]
+    mint: AccountInfo<'info>,
+    #[account(mut)]
+    mint_data: ProgramAccount<'info, MintData>,
+    #[account(signer)]
+    pub owner: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct EmergencyUnsyntesizeRequest<'info> {
+    #[account(mut)]
+    mint: AccountInfo<'info>,
+    #[account(mut)]
+    mint_data: ProgramAccount<'info, MintData>,
+}
+
+#[derive(Accounts)]
+pub struct BurnSyntheticToken<'info> {
+    #[account(mut)]
+    mint: AccountInfo<'info>,
+    #[account(mut)]
+    mint_data: ProgramAccount<'info, MintData>,
+}
+
+#[derive(Accounts)]
+pub struct EmergencyUnburn<'info> {
+    #[account(mut)]
+    mint: AccountInfo<'info>,
+    #[account(mut)]
+    mint_data: ProgramAccount<'info, MintData>,
+}
+
 // #endregion Synthesis
+// #region Portal
+
+#[derive(Accounts)]
+pub struct Synthesize<'info> {
+    #[account(mut)]
+    mint: AccountInfo<'info>,
+}
+
+// #endregion Portal
 
 #[error]
 pub enum ErrorCode {
+    #[msg("Unauthorized")]
+    Unauthorized = 1000,
+    #[msg("UNTRUSTED DEX")]
+    UntrustedDex,
     #[msg("This is an error message clients will automatically display 1234")]
     Test = 1234,
-    #[msg("Unauthorized")]
-    Unauthorized,
 }
