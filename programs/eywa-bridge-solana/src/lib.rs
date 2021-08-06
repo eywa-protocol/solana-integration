@@ -9,6 +9,8 @@ use anchor_lang::{
     // AccountDeserialize,
     // spl_token,
 };
+use anchor_spl::token::{self, Transfer};
+use anchor_lang::solana_program::keccak;
 // use anchor_spl::token as anchor_spl_token;
 // use spl_token::{
 //     ID as SPL_TOKEN_PID,
@@ -17,6 +19,8 @@ use anchor_lang::{
 #[program]
 pub mod eywa_bridge_solana {
     use super::*;
+    use anchor_lang::Key;
+    use anchor_lang::solana_program::keccak;
 
     // Singleton Data Account
     #[state]
@@ -115,78 +119,59 @@ pub mod eywa_bridge_solana {
 
     pub fn synthesize(
         ctx: Context<Synthesize>,
-        token_id: Pubkey,
-        token_real: [u8; 20], // String, // H160, // real token for synt
-        token_synt: Pubkey,
+        real_token: [u8; 20], // String, // H160, // real token for synt
         amount: u64,
-
-        // address _chain2address,
-        // address _receiveSide,
-        // address _oppositeBridge,
-        // uint _chainID
+        chain_to_address: [u8; 20],
+        receive_side: [u8; 20],
+        opposite_bridge: [u8; 20],
+        chain_id: u64,
 
     ) -> ProgramResult {
-        // let token_real = ctx.accounts.mint_data.token_real;
-        let message = "Portal synthesize";
-        // let message = format!(
-        //     "EmergencyUnburn: tx_id={:?}, token_real={:?}",
-        //     tx_id, token_real,
-        // );
-        msg!("{}", message);
+        msg!("{}", "Portal synthesize");
 
-        /*
-        // Залочить SPLки
-        TransferHelper.safeTransferFrom(_token, _msgSender(), address(this), _amount);
-        // Запомнить состояние
-        balanceOf[_token] = balanceOf[_token].add(_amount);
+        let synthesize_info =  &mut ctx.accounts.synthesize_info;
 
-        // посчитать внутренний идентификатор
-        txID = keccak256(abi.encodePacked(this, requestCount));
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.source_account.clone(),
+            to: ctx.accounts.destination_account.clone(),
+            authority: ctx.accounts.owner_account.clone(),
+        };
+        let cpi_program = ctx.accounts.spl_token_account.clone();
 
-        // сгенерировать вызов
-        bytes memory out  = abi.encodeWithSelector(bytes4(
-            keccak256(bytes('mintSyntheticToken(bytes32,address,uint256,address)'))
-        ), txID, _token, _amount, _chain2address);
-        // и передать наружу бэкенду
-        IBridge(bridge).transmitRequestV2(out,_receiveSide, _oppositeBridge, _chainID);
-        //  transmitRequestV2(
-                bytes memory _selector,
-                address receiveSide,
-                address oppositeBridge,
-                uint chainId
-            ) onlyTrustedDex
-        bytes32 requestId = prepareRqId(_selector, receiveSide, oppositeBridge, chainId);
-        //  function prepareRqId(
-                bytes memory  _selector,
-                address receiveSide,
-                address oppositeBridge,
-                uint chainId
-            )
-        bytes32 requestId = keccak256(
-            abi.encodePacked(this, nonce[oppositeBridge], _selector, receiveSide, oppositeBridge, chainId));
-        nonce[oppositeBridge] = nonce[oppositeBridge] + 1;
+        let cpi_ctx = CpiContext::new(cpi_program.clone(), cpi_accounts);
+        token::transfer(cpi_ctx, amount)?;
+        let mut hasher = keccak::Hasher::default();
+        hasher.hash(        <u64 as borsh::BorshSerialize>::try_to_vec(&synthesize_info.request_count )
+                                .unwrap()
+                                .as_slice(),
+        );
+        let tx_id =  hasher.result().0;
 
-        emit!(EvOracleRequest {
-            "setRequest",
-            address(this),
-            requestId,
-            _selector,
-            receiveSide,
-            oppositeBridge,
-            chainId,
-        });
-        // end transmitRequestV2
-        TxState storage txState = requests[txID];
-        txState.recipient    = _msgSender();
-        txState.chain2address    = _chain2address;
-        txState.rtoken     = _token;
-        txState.amount     = _amount;
-        txState.state = RequestState.Sent;
+        let out = [0u8; 10];
 
-        requestCount +=1;
+        //TODO: GET FROM NONCE ACCOUNT
+        let mut nonce = 0;
+        //TODO: GET BRIDGE
+        let bridge = Pubkey::default();
+        transmit_request(&out, receive_side, opposite_bridge, chain_id, &mut nonce, bridge);
 
-        emit EvSynthesizeRequest(txID, _msgSender(), _chain2address, _amount, _token);
-        */
+        let synthesize_request =  &mut ctx.accounts.synthesize_request;
+        synthesize_request.recipient = ctx.accounts.source_account.key();
+        synthesize_request.chain_to_address = chain_to_address;
+        synthesize_request.real_token = real_token;
+        synthesize_request.amount = amount;
+        synthesize_request.state = RequestState::Sent;
+
+        synthesize_info.request_count += 1;
+
+        let event = SynthesizeRequest {
+            id: tx_id,
+            from: ctx.accounts.source_account.key(),
+            to: chain_to_address,
+            amount,
+            real_token,
+        };
+        emit!(event);
 
         Ok(())
     }
@@ -194,6 +179,29 @@ pub mod eywa_bridge_solana {
 // #endregion Portal
 
 }
+
+pub fn transmit_request(selector: &[u8], receive_side: [u8; 20], opposite_bridge: [u8; 20], chain_id: u64, nonce: &mut u64, bridge: Pubkey){
+    //bytes32 requestId = keccak256(abi.encodePacked(this, nonce[opposite_bridge], _selector, receive_side, opposite_bridge, chainId));
+    let mut hasher = keccak::Hasher::default();
+    hasher.hash(<(u64, &[u8], [u8;20], [u8; 20], u64) as borsh::BorshSerialize>::try_to_vec(
+        &(*nonce, selector, receive_side, opposite_bridge, chain_id) )
+                            .unwrap()
+                            .as_slice(),
+    );
+    let request_id =  hasher.result().0;
+    *nonce += 1;
+    let oracle_request = OracleRequest{
+        request_type: "setRequest".to_string(),
+        bridge,
+        request_id,
+        selector: selector.to_vec(),
+        receive_side,
+        opposite_bridge,
+        chain_id
+    };
+    emit!(oracle_request);
+}
+
 
 // #region Events
 
@@ -212,8 +220,8 @@ pub struct MyEvent {
             address bridge,
             bytes32 requestId,
             bytes   selector,
-            address receiveSide,
-            address oppositeBridge,
+            address receive_side,
+            address opposite_bridge,
             uint chainid
         );
     */
@@ -399,7 +407,16 @@ pub struct EmergencyUnburn<'info> {
 #[derive(Accounts)]
 pub struct Synthesize<'info> {
     #[account(mut)]
-    mint: AccountInfo<'info>,
+    pub synthesize_info: ProgramAccount<'info, SynthesizeInfo>,
+    #[account(mut)]
+    pub synthesize_request: ProgramAccount<'info, SynthesizeRequestInfo>,
+    source_account: AccountInfo<'info>,
+    #[account(mut)]
+    destination_account: AccountInfo<'info>,
+    #[account(signer)]
+    owner_account: AccountInfo<'info>,
+    spl_token_account: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
 }
 
 // #endregion Portal
@@ -412,4 +429,55 @@ pub enum ErrorCode {
     UntrustedDex,
     #[msg("This is an error message clients will automatically display 1234")]
     Test = 1234,
+}
+
+#[account]
+#[derive(Default)]
+pub struct SynthesizeInfo {
+    request_count: u64,
+
+}
+
+#[account]
+#[derive(Default)]
+pub struct SynthesizeRequestInfo {
+    recipient: Pubkey,
+    chain_to_address: [u8; 20],
+    real_token: [u8; 20],
+    amount: u64,
+    state: RequestState,
+}
+
+#[event]
+pub struct SynthesizeRequest {
+    id: [u8; 32],
+    from: Pubkey,
+    to: [u8; 20],
+    amount: u64,
+    real_token: [u8; 20],
+}
+
+#[event]
+pub struct OracleRequest {
+    request_type: String,
+    bridge: Pubkey,
+    request_id: [u8; 32],
+    selector: Vec<u8>,
+    receive_side: [u8; 20],
+    opposite_bridge: [u8; 20],
+    chain_id: u64
+}
+
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub enum RequestState {
+    Default,
+    Sent,
+    Reverted
+}
+
+impl Default for RequestState {
+    fn default() -> Self {
+        RequestState::Default
+    }
 }
