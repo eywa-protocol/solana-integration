@@ -1,16 +1,14 @@
 // use anchor_lang::prelude::*;
+use anchor_lang::solana_program::{keccak, system_program};
 use anchor_lang::{
     prelude::*,
-    solana_program::{
-        // entrypoint::ProgramResult,
-        program_error::ProgramError,
-    },
+    solana_program::program_error::ProgramError,
     // AccountSerialize,
     // AccountDeserialize,
     // spl_token,
 };
 use anchor_spl::token::{self, Transfer};
-use anchor_lang::solana_program::keccak;
+
 // use anchor_spl::token as anchor_spl_token;
 // use spl_token::{
 //     ID as SPL_TOKEN_PID,
@@ -19,18 +17,16 @@ use anchor_lang::solana_program::keccak;
 #[program]
 pub mod eywa_bridge_solana {
     use super::*;
-    use anchor_lang::Key;
     use anchor_lang::solana_program::keccak;
+    use anchor_lang::Key;
 
     // Singleton Data Account
     #[state]
     pub struct Settings {
         pub owner: Pubkey,
         pub param: u64,
-
         // address public _listNode;
         // uint256 public requestCount = 1;
-
     }
     impl Settings {
         pub fn new(ctx: Context<Auth>) -> Result<Self> {
@@ -49,11 +45,7 @@ pub mod eywa_bridge_solana {
         }
     }
 
-    pub fn initialize(
-        ctx: Context<Initialize>,
-        admin: Pubkey,
-        data: u64,
-    ) -> ProgramResult {
+    pub fn initialize(ctx: Context<Initialize>, admin: Pubkey, data: u64) -> ProgramResult {
         let acc_data = &mut ctx.accounts.data;
 
         acc_data.owner = admin;
@@ -93,16 +85,17 @@ pub mod eywa_bridge_solana {
         Ok(())
     }
 
-// #region Syntesise
+    // #region Syntesise
 
     pub fn create_representation(
         ctx: Context<CreateRepresentation>,
         token_real: [u8; 20], // String, // H160, // real token for synt
         token_synt: Pubkey,
-        synt_name: String, // synt name
+        synt_name: String,   // synt name
         synt_symbol: String, // synt short name
-        synt_decimals: u8
-    ) -> ProgramResult { // onlyOwner
+        synt_decimals: u8,
+    ) -> ProgramResult {
+        // onlyOwner
         // synthesizer
         ctx.accounts.mint_data.supply = 0;
         ctx.accounts.mint_data.name = synt_name;
@@ -114,8 +107,8 @@ pub mod eywa_bridge_solana {
         Ok(())
     }
 
-// #endregion Syntesise
-// #region Portal
+    // #endregion Syntesise
+    // #region Portal
 
     pub fn synthesize(
         ctx: Context<Synthesize>,
@@ -125,11 +118,10 @@ pub mod eywa_bridge_solana {
         receive_side: [u8; 20],
         opposite_bridge: [u8; 20],
         chain_id: u64,
-
     ) -> ProgramResult {
         msg!("{}", "Portal synthesize");
 
-        let synthesize_info =  &mut ctx.accounts.synthesize_info;
+        let synthesize_info = &mut ctx.accounts.synthesize_info;
 
         let cpi_accounts = Transfer {
             from: ctx.accounts.source_account.clone(),
@@ -141,21 +133,36 @@ pub mod eywa_bridge_solana {
         let cpi_ctx = CpiContext::new(cpi_program.clone(), cpi_accounts);
         token::transfer(cpi_ctx, amount)?;
         let mut hasher = keccak::Hasher::default();
-        hasher.hash(        <u64 as borsh::BorshSerialize>::try_to_vec(&synthesize_info.request_count )
-                                .unwrap()
-                                .as_slice(),
+        hasher.hash(
+            <u64 as borsh::BorshSerialize>::try_to_vec(&synthesize_info.request_count)
+                .unwrap()
+                .as_slice(),
         );
-        let tx_id =  hasher.result().0;
+        let tx_id = hasher.result().0;
 
         let out = [0u8; 10];
 
-        //TODO: GET FROM NONCE ACCOUNT
-        let mut nonce = 0;
+        let mut bridge_nonce: ProgramAccount<BridgeNonce> = get_or_create_account_data(
+            &ctx.accounts.bridge_nonce,
+            &ctx.accounts.nonce_master_account,
+            &ctx.accounts.system_program,
+            &ctx.accounts.rent,
+            4,
+            &[],
+        )?;
+
         //TODO: GET BRIDGE
         let bridge = Pubkey::default();
-        transmit_request(&out, receive_side, opposite_bridge, chain_id, &mut nonce, bridge);
+        transmit_request(
+            &out,
+            receive_side,
+            opposite_bridge,
+            chain_id,
+            &mut bridge_nonce.nonce,
+            bridge,
+        );
 
-        let synthesize_request =  &mut ctx.accounts.synthesize_request;
+        let synthesize_request = &mut ctx.accounts.synthesize_request;
         synthesize_request.recipient = ctx.accounts.source_account.key();
         synthesize_request.chain_to_address = chain_to_address;
         synthesize_request.real_token = real_token;
@@ -176,32 +183,76 @@ pub mod eywa_bridge_solana {
         Ok(())
     }
 
-// #endregion Portal
-
+    // #endregion Portal
 }
 
-pub fn transmit_request(selector: &[u8], receive_side: [u8; 20], opposite_bridge: [u8; 20], chain_id: u64, nonce: &mut u64, bridge: Pubkey){
+pub fn transmit_request(
+    selector: &[u8],
+    receive_side: [u8; 20],
+    opposite_bridge: [u8; 20],
+    chain_id: u64,
+    nonce: &mut u64,
+    bridge: Pubkey,
+) {
     //bytes32 requestId = keccak256(abi.encodePacked(this, nonce[opposite_bridge], _selector, receive_side, opposite_bridge, chainId));
     let mut hasher = keccak::Hasher::default();
-    hasher.hash(<(u64, &[u8], [u8;20], [u8; 20], u64) as borsh::BorshSerialize>::try_to_vec(
-        &(*nonce, selector, receive_side, opposite_bridge, chain_id) )
-                            .unwrap()
-                            .as_slice(),
+    hasher.hash(
+        <(u64, &[u8], [u8; 20], [u8; 20], u64) as borsh::BorshSerialize>::try_to_vec(&(
+            *nonce,
+            selector,
+            receive_side,
+            opposite_bridge,
+            chain_id,
+        ))
+        .unwrap()
+        .as_slice(),
     );
-    let request_id =  hasher.result().0;
+    let request_id = hasher.result().0;
     *nonce += 1;
-    let oracle_request = OracleRequest{
+    let oracle_request = OracleRequest {
         request_type: "setRequest".to_string(),
         bridge,
         request_id,
         selector: selector.to_vec(),
         receive_side,
         opposite_bridge,
-        chain_id
+        chain_id,
     };
     emit!(oracle_request);
 }
 
+pub fn get_or_create_account_data<'info, T>(
+    data_account: &AccountInfo<'info>,
+    master_account: &AccountInfo<'info>,
+    system_program: &AccountInfo<'info>,
+    rent: &Sysvar<'info, Rent>,
+    space: u64,
+    seed: &[&[&[u8]]],
+) -> std::result::Result<ProgramAccount<'info, T>, ProgramError>
+where
+    T: AccountSerialize + AccountDeserialize + Clone,
+{
+    if *data_account.owner == system_program::ID {
+        let lamports = rent.minimum_balance(std::convert::TryInto::try_into(space).unwrap());
+        let ix = anchor_lang::solana_program::system_instruction::create_account(
+            master_account.key,
+            data_account.key,
+            lamports,
+            space,
+            master_account.owner,
+        );
+
+        let accounts = [
+            master_account.clone(),
+            data_account.clone(),
+            system_program.clone(),
+        ];
+
+        anchor_lang::solana_program::program::invoke_signed(&ix, &accounts, seed)?;
+    }
+
+    ProgramAccount::try_from(data_account)
+}
 
 // #region Events
 
@@ -214,42 +265,41 @@ pub struct MyEvent {
 
 // #region Bridge
 
-    /*
-        event OracleRequest(
-            string  requestType,
-            address bridge,
-            bytes32 requestId,
-            bytes   selector,
-            address receive_side,
-            address opposite_bridge,
-            uint chainid
-        );
-    */
-    #[event]
-    pub struct EvOracleRequest {
-    }
+/*
+    event OracleRequest(
+        string  requestType,
+        address bridge,
+        bytes32 requestId,
+        bytes   selector,
+        address receive_side,
+        address opposite_bridge,
+        uint chainid
+    );
+*/
+#[event]
+pub struct EvOracleRequest {}
 
 // #endregion Bridge
 // #region Portal
 
-    /*
-        event SynthesizeRequest(
-            bytes32 indexed _id,
-            address indexed _from,
-            address indexed _to,
-            uint _amount,
-            address _token
-        );
-    */
-    #[event]
-    pub struct EvSynthesizeRequest {
-        #[index]
-        tx_id: [u8; 32],   // H256, // id for repley protection
-        // address indexed _from, // msgSender
-        // address indexed _to, // chain2address
-        // amount: u64,
-        // address _token
-    }
+/*
+    event SynthesizeRequest(
+        bytes32 indexed _id,
+        address indexed _from,
+        address indexed _to,
+        uint _amount,
+        address _token
+    );
+*/
+#[event]
+pub struct EvSynthesizeRequest {
+    #[index]
+    tx_id: [u8; 32], // H256, // id for repley protection
+                     // address indexed _from, // msgSender
+                     // address indexed _to, // chain2address
+                     // amount: u64,
+                     // address _token
+}
 
 // #endregion Portal
 
@@ -266,7 +316,7 @@ pub struct MintData {
     pub supply: u32,
     pub token_real: [u8; 20], // String, // H160, // real token for synt
     pub token_synt: Pubkey,
-    pub name: String, // synt name
+    pub name: String,   // synt name
     pub symbol: String, // synt short name
     pub decimals: u8,
 }
@@ -417,6 +467,11 @@ pub struct Synthesize<'info> {
     owner_account: AccountInfo<'info>,
     spl_token_account: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
+    #[account(signer)]
+    nonce_master_account: AccountInfo<'info>,
+    #[account(mut)]
+    bridge_nonce: AccountInfo<'info>,
+    system_program: AccountInfo<'info>,
 }
 
 // #endregion Portal
@@ -435,7 +490,12 @@ pub enum ErrorCode {
 #[derive(Default)]
 pub struct SynthesizeInfo {
     request_count: u64,
+}
 
+#[account]
+#[derive(Default)]
+pub struct BridgeNonce {
+    nonce: u64,
 }
 
 #[account]
@@ -465,15 +525,14 @@ pub struct OracleRequest {
     selector: Vec<u8>,
     receive_side: [u8; 20],
     opposite_bridge: [u8; 20],
-    chain_id: u64
+    chain_id: u64,
 }
-
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub enum RequestState {
     Default,
     Sent,
-    Reverted
+    Reverted,
 }
 
 impl Default for RequestState {
