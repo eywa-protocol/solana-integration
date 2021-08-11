@@ -1,4 +1,7 @@
 // use anchor_lang::prelude::*;
+use std::str;
+
+use anchor_lang::prelude::borsh::BorshDeserialize;
 use anchor_lang::solana_program::{keccak, system_program};
 use anchor_lang::{
     prelude::*,
@@ -17,33 +20,34 @@ use anchor_spl::token::{self, Transfer};
 #[program]
 pub mod eywa_bridge_solana {
     use super::*;
+    use anchor_lang::prelude::borsh::BorshSerialize;
     use anchor_lang::solana_program::keccak;
     use anchor_lang::Key;
 
     // Singleton Data Account
-    #[state]
-    pub struct Settings {
-        pub owner: Pubkey,
-        pub param: u64,
-        // address public _listNode;
-        // uint256 public requestCount = 1;
-    }
-    impl Settings {
-        pub fn new(ctx: Context<Auth>) -> Result<Self> {
-            Ok(Self {
-                owner: *ctx.accounts.owner.key,
-                param: 100,
-            })
-        }
-
-        pub fn increment(&mut self, ctx: Context<Auth>) -> Result<()> {
-            if &self.owner != ctx.accounts.owner.key {
-                return Err(ErrorCode::Unauthorized.into());
-            }
-            self.param += 1;
-            Ok(())
-        }
-    }
+    // #[state]
+    // pub struct Settings {
+    //     pub owner: Pubkey,
+    //     pub param: u64,
+    //     // address public _listNode;
+    //     // uint256 public requestCount = 1;
+    // }
+    // impl Settings {
+    //     pub fn new(ctx: Context<Auth>) -> Result<Self> {
+    //         Ok(Self {
+    //             owner: *ctx.accounts.owner.key,
+    //             param: 100,
+    //         })
+    //     }
+    //
+    //     pub fn increment(&mut self, ctx: Context<Auth>) -> Result<()> {
+    //         if &self.owner != ctx.accounts.owner.key {
+    //             return Err(ErrorCode::Unauthorized.into());
+    //         }
+    //         self.param += 1;
+    //         Ok(())
+    //     }
+    // }
 
     pub fn initialize(ctx: Context<Initialize>, admin: Pubkey, data: u64) -> ProgramResult {
         let acc_data = &mut ctx.accounts.data;
@@ -110,81 +114,109 @@ pub mod eywa_bridge_solana {
     // #endregion Syntesise
     // #region Portal
 
-    pub fn synthesize(
-        ctx: Context<Synthesize>,
-        real_token: [u8; 20], // String, // H160, // real token for synt
-        amount: u64,
-        chain_to_address: [u8; 20],
-        receive_side: [u8; 20],
-        opposite_bridge: [u8; 20],
-        chain_id: u64,
-    ) -> ProgramResult {
-        msg!("{}", "Portal synthesize");
-
-        let synthesize_info = &mut ctx.accounts.synthesize_info;
-
-        let cpi_accounts = Transfer {
-            from: ctx.accounts.source_account.clone(),
-            to: ctx.accounts.destination_account.clone(),
-            authority: ctx.accounts.owner_account.clone(),
-        };
-        let cpi_program = ctx.accounts.spl_token_account.clone();
-
-        let cpi_ctx = CpiContext::new(cpi_program.clone(), cpi_accounts);
-        token::transfer(cpi_ctx, amount)?;
-        let mut hasher = keccak::Hasher::default();
-        hasher.hash(
-            <u64 as borsh::BorshSerialize>::try_to_vec(&synthesize_info.request_count)
-                .unwrap()
-                .as_slice(),
-        );
-        let tx_id = hasher.result().0;
-
-        let out = [0u8; 10];
-
-        let mut bridge_nonce: ProgramAccount<BridgeNonce> = get_or_create_account_data(
-            &ctx.accounts.bridge_nonce,
-            &ctx.accounts.nonce_master_account,
-            &ctx.accounts.system_program,
-            &ctx.accounts.rent,
-            4,
-            &[],
-        )?;
-
-        //TODO: GET BRIDGE
-        let bridge = Pubkey::default();
-        transmit_request(
-            &out,
-            receive_side,
-            opposite_bridge,
-            chain_id,
-            &mut bridge_nonce.nonce,
-            bridge,
-        );
-
-        let synthesize_request = &mut ctx.accounts.synthesize_request;
-        synthesize_request.recipient = ctx.accounts.source_account.key();
-        synthesize_request.chain_to_address = chain_to_address;
-        synthesize_request.real_token = real_token;
-        synthesize_request.amount = amount;
-        synthesize_request.state = RequestState::Sent;
-
-        synthesize_info.request_count += 1;
-
-        let event = SynthesizeRequest {
-            id: tx_id,
-            from: ctx.accounts.source_account.key(),
-            to: chain_to_address,
-            amount,
-            real_token,
-        };
-        emit!(event);
-
-        Ok(())
+    #[state]
+    pub struct Portal {
+        pub request_count: u64,
     }
 
-    // #endregion Portal
+    impl Portal {
+        pub fn new(_ctx: Context<PortalInit>) -> Result<Self> {
+            Ok(Self { request_count: 0 })
+        }
+        pub fn synthesize(
+            &mut self,
+            ctx: Context<Synthesize>,
+            real_token: [u8; 20], // String, // H160, // real token for synt
+            amount: u64,
+            chain_to_address: [u8; 20],
+            receive_side: [u8; 20],
+            opposite_bridge: [u8; 20],
+            chain_id: u64,
+        ) -> ProgramResult {
+            let cpi_accounts = Transfer {
+                from: ctx.accounts.source_account.clone(),
+                to: ctx.accounts.destination_account.clone(),
+                authority: ctx.accounts.owner_account.clone(),
+            };
+            let cpi_program = ctx.accounts.spl_token_account.clone();
+            let cpi_ctx = CpiContext::new(cpi_program.clone(), cpi_accounts);
+            token::transfer(cpi_ctx, amount)?;
+
+            let mut hasher = keccak::Hasher::default();
+            hasher.hash(
+                <(Pubkey, u64) as borsh::BorshSerialize>::try_to_vec(&(
+                    *ctx.program_id,
+                    self.request_count,
+                ))
+                .map_err(|_| ProgramError::InvalidArgument)?
+                .as_slice(),
+            );
+            let tx_id = hasher.result().0;
+
+            let mut hasher = keccak::Hasher::default();
+            hasher.hash(b"mintSyntheticToken(bytes32,address,uint256,address)");
+            let title = hasher.result().0;
+
+            let mut hasher = keccak::Hasher::default();
+            hasher.hash(
+                <([u8;32], [u8;32], [u8;20], u64, [u8;20]) as borsh::BorshSerialize>::try_to_vec(&(
+                    title,
+                    tx_id,
+                    real_token,
+                    amount,
+                    chain_to_address))
+                    .map_err(|_| ProgramError::InvalidArgument)?.as_slice());
+
+            let out = hasher.result().0;
+
+            let mut bridge_nonce: BridgeNonce = get_or_create_account_data(
+                &ctx.accounts.bridge_nonce,
+                &ctx.accounts.nonce_master_account,
+                &ctx.accounts.system_program,
+                &ctx.accounts.rent,
+                8,
+                //str::from_utf8(&opposite_bridge).map_err(|_| ProgramError::InvalidArgument)?,
+                //TODO: Take seed from params
+                "0,1,2,3,4,5,6,7,8",
+                &[],
+                ctx.program_id,
+            )?;
+
+            transmit_request(
+                &out,
+                receive_side,
+                opposite_bridge,
+                chain_id,
+                &mut bridge_nonce.nonce,
+                ctx.program_id,
+            );
+
+            bridge_nonce.serialize(&mut *ctx.accounts.bridge_nonce.try_borrow_mut_data()?)?;
+
+            let synthesize_request = &mut ctx.accounts.synthesize_request;
+            synthesize_request.recipient = ctx.accounts.source_account.key();
+            synthesize_request.chain_to_address = chain_to_address;
+            synthesize_request.real_token = real_token;
+            synthesize_request.amount = amount;
+            synthesize_request.state = RequestState::Sent;
+
+            self.request_count += 1;
+
+            let event = SynthesizeRequest {
+                id: tx_id,
+                from: ctx.accounts.source_account.key(),
+                to: chain_to_address,
+                amount,
+                real_token,
+            };
+            emit!(event);
+
+            Ok(())
+        }
+    }
 }
+
+// #endregion Portal
 
 pub fn transmit_request(
     selector: &[u8],
@@ -192,7 +224,7 @@ pub fn transmit_request(
     opposite_bridge: [u8; 20],
     chain_id: u64,
     nonce: &mut u64,
-    bridge: Pubkey,
+    bridge: &Pubkey,
 ) {
     //bytes32 requestId = keccak256(abi.encodePacked(this, nonce[opposite_bridge], _selector, receive_side, opposite_bridge, chainId));
     let mut hasher = keccak::Hasher::default();
@@ -211,7 +243,7 @@ pub fn transmit_request(
     *nonce += 1;
     let oracle_request = OracleRequest {
         request_type: "setRequest".to_string(),
-        bridge,
+        bridge: *bridge,
         request_id,
         selector: selector.to_vec(),
         receive_side,
@@ -227,19 +259,23 @@ pub fn get_or_create_account_data<'info, T>(
     system_program: &AccountInfo<'info>,
     rent: &Sysvar<'info, Rent>,
     space: u64,
-    seed: &[&[&[u8]]],
-) -> std::result::Result<ProgramAccount<'info, T>, ProgramError>
+    seed: &str,
+    seeds: &[&[&[u8]]],
+    program_id: &Pubkey,
+) -> std::result::Result<T, ProgramError>
 where
-    T: AccountSerialize + AccountDeserialize + Clone,
+    T: AccountSerialize + AccountDeserialize + Clone + BorshDeserialize,
 {
     if *data_account.owner == system_program::ID {
         let lamports = rent.minimum_balance(std::convert::TryInto::try_into(space).unwrap());
-        let ix = anchor_lang::solana_program::system_instruction::create_account(
+        let ix = anchor_lang::solana_program::system_instruction::create_account_with_seed(
             master_account.key,
             data_account.key,
+            master_account.key,
+            seed,
             lamports,
             space,
-            master_account.owner,
+            program_id,
         );
 
         let accounts = [
@@ -247,11 +283,10 @@ where
             data_account.clone(),
             system_program.clone(),
         ];
-
-        anchor_lang::solana_program::program::invoke_signed(&ix, &accounts, seed)?;
+        anchor_lang::solana_program::program::invoke_signed(&ix, &accounts, seeds)?;
     }
 
-    ProgramAccount::try_from(data_account)
+    Ok(T::try_from_slice(*data_account.data.borrow())?)
 }
 
 // #region Events
@@ -365,6 +400,9 @@ pub struct Auth<'info> {
     owner: AccountInfo<'info>,
 }
 
+#[derive(Accounts)]
+pub struct PortalInit {}
+
 // #endregion for methods
 // #region for functions
 
@@ -456,18 +494,17 @@ pub struct EmergencyUnburn<'info> {
 
 #[derive(Accounts)]
 pub struct Synthesize<'info> {
-    #[account(mut)]
-    pub synthesize_info: ProgramAccount<'info, SynthesizeInfo>,
-    #[account(mut)]
+    #[account(init)]
     pub synthesize_request: ProgramAccount<'info, SynthesizeRequestInfo>,
+    #[account(mut)]
     source_account: AccountInfo<'info>,
     #[account(mut)]
     destination_account: AccountInfo<'info>,
-    #[account(signer)]
+    #[account(signer, mut)]
     owner_account: AccountInfo<'info>,
     spl_token_account: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
-    #[account(signer)]
+    #[account(signer, mut)]
     nonce_master_account: AccountInfo<'info>,
     #[account(mut)]
     bridge_nonce: AccountInfo<'info>,
