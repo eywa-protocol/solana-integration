@@ -25,30 +25,168 @@ pub mod eywa_bridge_solana {
     use anchor_lang::Key;
 
     // Singleton Data Account
-    // #[state]
-    // pub struct Settings {
-    //     pub owner: Pubkey,
-    //     pub param: u64,
-    //     // address public _listNode;
-    //     // uint256 public requestCount = 1;
-    // }
-    // impl Settings {
-    //     pub fn new(ctx: Context<Auth>) -> Result<Self> {
-    //         Ok(Self {
-    //             owner: *ctx.accounts.owner.key,
-    //             param: 100,
-    //         })
-    //     }
-    //
-    //     pub fn increment(&mut self, ctx: Context<Auth>) -> Result<()> {
-    //         if &self.owner != ctx.accounts.owner.key {
-    //             return Err(ErrorCode::Unauthorized.into());
-    //         }
-    //         self.param += 1;
-    //         Ok(())
-    //     }
-    // }
+    #[state]
+    pub struct Settings {
+        pub owner: Pubkey,
+        pub param: u64,
+        // address public _listNode;
+        // uint256 public requestCount = 1;
+        pub portal_request_count: u64,
+    }
+    impl Settings {
+        pub fn new(ctx: Context<Auth>) -> Result<Self> {
+            Ok(Self {
+                owner: *ctx.accounts.owner.key,
+                param: 100,
+                portal_request_count: 0,
+            })
+        }
 
+        pub fn increment(&mut self, ctx: Context<Auth>) -> Result<()> {
+            if &self.owner != ctx.accounts.owner.key {
+                return Err(ErrorCode::Unauthorized.into());
+            }
+            self.param += 1;
+            Ok(())
+        }
+
+        // #region Portal
+
+        pub fn synthesize(
+            &mut self,
+            ctx: Context<Synthesize>,
+            real_token: [u8; 20], // String, // H160, // real token for synt
+            amount: u64,
+            chain_to_address: [u8; 20],
+            receive_side: [u8; 20],
+            opposite_bridge: [u8; 20],
+            chain_id: u64,
+        ) -> ProgramResult {
+            let cpi_accounts = Transfer {
+                from: ctx.accounts.source_account.clone(),
+                to: ctx.accounts.destination_account.clone(),
+                authority: ctx.accounts.owner_account.clone(),
+            };
+            let cpi_program = ctx.accounts.spl_token_account.clone();
+            let cpi_ctx = CpiContext::new(cpi_program.clone(), cpi_accounts);
+            token::transfer(cpi_ctx, amount)?;
+
+            let mut hasher = keccak::Hasher::default();
+            hasher.hash(
+                <(Pubkey, u64) as borsh::BorshSerialize>::try_to_vec(&(
+                    *ctx.program_id,
+                    self.portal_request_count,
+                ))
+                .map_err(|_| ProgramError::InvalidArgument)?
+                .as_slice(),
+            );
+            let tx_id = hasher.result().0;
+
+            let mut hasher = keccak::Hasher::default();
+            hasher.hash(b"mintSyntheticToken(bytes32,address,uint256,address)");
+            let title = hasher.result().0;
+
+            let mut hasher = keccak::Hasher::default();
+            hasher.hash(
+                <([u8;32], [u8;32], [u8;20], u64, [u8;20]) as borsh::BorshSerialize>::try_to_vec(&(
+                    title,
+                    tx_id,
+                    real_token,
+                    amount,
+                    chain_to_address))
+                    .map_err(|_| ProgramError::InvalidArgument)?.as_slice());
+
+            let out = hasher.result().0;
+
+            let mut bridge_nonce: BridgeNonce = get_or_create_account_data(
+                &ctx.accounts.bridge_nonce,
+                &ctx.accounts.nonce_master_account,
+                &ctx.accounts.system_program,
+                &ctx.accounts.rent,
+                8,
+                //str::from_utf8(&opposite_bridge).map_err(|_| ProgramError::InvalidArgument)?,
+                //TODO: Take seed from params
+                "0,1,2,3,4,5,6,7,8",
+                &[],
+                ctx.program_id,
+            )?;
+
+            transmit_request(
+                &out,
+                receive_side,
+                opposite_bridge,
+                chain_id,
+                &mut bridge_nonce.nonce,
+                ctx.program_id,
+            );
+
+            bridge_nonce.serialize(&mut *ctx.accounts.bridge_nonce.try_borrow_mut_data()?)?;
+
+            let synthesize_request = &mut ctx.accounts.synthesize_request;
+            synthesize_request.tx_id = tx_id;
+            synthesize_request.recipient = ctx.accounts.source_account.key();
+            synthesize_request.chain_to_address = chain_to_address;
+            synthesize_request.real_token = real_token;
+            synthesize_request.amount = amount;
+            synthesize_request.state = RequestState::Sent;
+
+            self.portal_request_count += 1;
+
+            let event = SynthesizeRequest {
+                id: tx_id,
+                from: ctx.accounts.source_account.key(),
+                to: chain_to_address,
+                amount,
+                real_token,
+            };
+            emit!(event);
+
+            Ok(())
+        }
+
+        pub fn emergency_unsynthesize(
+            &self,
+            ctx: Context<Unsynthesize>,
+            tx_id: [u8; 32],
+        ) -> ProgramResult {
+            if *ctx.accounts.destination_account.key != ctx.accounts.synthesize_request.recipient {
+                msg!("Portal: destination account doesn't match with recipient");
+                msg!("{} {}", *ctx.accounts.destination_account.key, ctx.accounts.synthesize_request.recipient);
+                return ProgramResult::Err(ProgramError::InvalidAccountData);
+            }
+            if ctx.accounts.synthesize_request.tx_id != tx_id {
+                msg!("Portal: got synthesize_request account with another tx_id");
+                msg!("{:?} {:?}", ctx.accounts.synthesize_request.tx_id, tx_id);
+                return ProgramResult::Err(ProgramError::InvalidAccountData);
+            }
+            if ctx.accounts.synthesize_request.state != RequestState::Sent {
+                msg!("Portal:state not open or tx does not exist");
+                return ProgramResult::Err(ProgramError::InvalidAccountData);
+            }
+
+            ctx.accounts.synthesize_request.state = RequestState::Reverted;
+
+            let cpi_accounts = Transfer {
+                from: ctx.accounts.source_account.clone(),
+                to: ctx.accounts.destination_account.clone(),
+                authority: ctx.accounts.owner_account.clone(),
+            };
+            let cpi_program = ctx.accounts.spl_token_account.clone();
+            let cpi_ctx = CpiContext::new(cpi_program.clone(), cpi_accounts);
+            token::transfer(cpi_ctx, ctx.accounts.synthesize_request.amount)?;
+
+            let event = RevertSynthesizeCompleted {
+                id: tx_id,
+                to: ctx.accounts.synthesize_request.recipient,
+                amount: ctx.accounts.synthesize_request.amount,
+                token: ctx.accounts.synthesize_request.real_token,
+            };
+            emit!(event);
+
+            Ok(())
+        }
+    }
+    // #endregion Portal
     pub fn initialize(ctx: Context<Initialize>, admin: Pubkey, data: u64) -> ProgramResult {
         let acc_data = &mut ctx.accounts.data;
 
@@ -112,154 +250,8 @@ pub mod eywa_bridge_solana {
     }
 
     // #endregion Syntesise
-    // #region Portal
 
-    #[state]
-    pub struct Portal {
-        pub request_count: u64,
-    }
-
-    impl Portal {
-        pub fn new(_ctx: Context<PortalInit>) -> Result<Self> {
-            Ok(Self { request_count: 0 })
-        }
-        pub fn synthesize(
-            &mut self,
-            ctx: Context<Synthesize>,
-            real_token: [u8; 20], // String, // H160, // real token for synt
-            amount: u64,
-            chain_to_address: [u8; 20],
-            receive_side: [u8; 20],
-            opposite_bridge: [u8; 20],
-            chain_id: u64,
-        ) -> ProgramResult {
-            let cpi_accounts = Transfer {
-                from: ctx.accounts.source_account.clone(),
-                to: ctx.accounts.destination_account.clone(),
-                authority: ctx.accounts.owner_account.clone(),
-            };
-            let cpi_program = ctx.accounts.spl_token_account.clone();
-            let cpi_ctx = CpiContext::new(cpi_program.clone(), cpi_accounts);
-            token::transfer(cpi_ctx, amount)?;
-
-            let mut hasher = keccak::Hasher::default();
-            hasher.hash(
-                <(Pubkey, u64) as borsh::BorshSerialize>::try_to_vec(&(
-                    *ctx.program_id,
-                    self.request_count,
-                ))
-                .map_err(|_| ProgramError::InvalidArgument)?
-                .as_slice(),
-            );
-            let tx_id = hasher.result().0;
-
-            let mut hasher = keccak::Hasher::default();
-            hasher.hash(b"mintSyntheticToken(bytes32,address,uint256,address)");
-            let title = hasher.result().0;
-
-            let mut hasher = keccak::Hasher::default();
-            hasher.hash(
-                <([u8;32], [u8;32], [u8;20], u64, [u8;20]) as borsh::BorshSerialize>::try_to_vec(&(
-                    title,
-                    tx_id,
-                    real_token,
-                    amount,
-                    chain_to_address))
-                    .map_err(|_| ProgramError::InvalidArgument)?.as_slice());
-
-            let out = hasher.result().0;
-
-            let mut bridge_nonce: BridgeNonce = get_or_create_account_data(
-                &ctx.accounts.bridge_nonce,
-                &ctx.accounts.nonce_master_account,
-                &ctx.accounts.system_program,
-                &ctx.accounts.rent,
-                8,
-                //str::from_utf8(&opposite_bridge).map_err(|_| ProgramError::InvalidArgument)?,
-                //TODO: Take seed from params
-                "0,1,2,3,4,5,6,7,8",
-                &[],
-                ctx.program_id,
-            )?;
-
-            transmit_request(
-                &out,
-                receive_side,
-                opposite_bridge,
-                chain_id,
-                &mut bridge_nonce.nonce,
-                ctx.program_id,
-            );
-
-            bridge_nonce.serialize(&mut *ctx.accounts.bridge_nonce.try_borrow_mut_data()?)?;
-
-            let synthesize_request = &mut ctx.accounts.synthesize_request;
-            synthesize_request.tx_id = tx_id;
-            synthesize_request.recipient = ctx.accounts.source_account.key();
-            synthesize_request.chain_to_address = chain_to_address;
-            synthesize_request.real_token = real_token;
-            synthesize_request.amount = amount;
-            synthesize_request.state = RequestState::Sent;
-
-            self.request_count += 1;
-
-            let event = SynthesizeRequest {
-                id: tx_id,
-                from: ctx.accounts.source_account.key(),
-                to: chain_to_address,
-                amount,
-                real_token,
-            };
-            emit!(event);
-
-            Ok(())
-        }
-
-        pub fn emergency_unsynthesize(
-            &self,
-            ctx: Context<Unsynthesize>,
-            tx_id: [u8; 32],
-        ) -> ProgramResult {
-            if *ctx.accounts.destination_account.key != ctx.accounts.synthesize_request.recipient {
-                msg!("Portal: destination account doesn't match with recipient");
-                msg!("{} {}", *ctx.accounts.destination_account.key, ctx.accounts.synthesize_request.recipient);
-                return ProgramResult::Err(ProgramError::InvalidAccountData);
-            }
-            if ctx.accounts.synthesize_request.tx_id != tx_id {
-                msg!("Portal: got synthesize_request account with another tx_id");
-                msg!("{:?} {:?}", ctx.accounts.synthesize_request.tx_id, tx_id);
-                return ProgramResult::Err(ProgramError::InvalidAccountData);
-            }
-            if ctx.accounts.synthesize_request.state != RequestState::Sent {
-                msg!("Portal:state not open or tx does not exist");
-                return ProgramResult::Err(ProgramError::InvalidAccountData);
-            }
-
-            ctx.accounts.synthesize_request.state = RequestState::Reverted;
-
-            let cpi_accounts = Transfer {
-                from: ctx.accounts.source_account.clone(),
-                to: ctx.accounts.destination_account.clone(),
-                authority: ctx.accounts.owner_account.clone(),
-            };
-            let cpi_program = ctx.accounts.spl_token_account.clone();
-            let cpi_ctx = CpiContext::new(cpi_program.clone(), cpi_accounts);
-            token::transfer(cpi_ctx, ctx.accounts.synthesize_request.amount)?;
-
-            let event = RevertSynthesizeCompleted {
-                id: tx_id,
-                to: ctx.accounts.synthesize_request.recipient,
-                amount: ctx.accounts.synthesize_request.amount,
-                token: ctx.accounts.synthesize_request.real_token,
-            };
-            emit!(event);
-
-            Ok(())
-        }
-    }
 }
-
-// #endregion Portal
 
 pub fn transmit_request(
     selector: &[u8],
@@ -579,11 +571,13 @@ pub enum ErrorCode {
     Test = 1234,
 }
 
+/*
 #[account]
 #[derive(Default)]
 pub struct SynthesizeInfo {
     request_count: u64,
 }
+*/
 
 #[account]
 #[derive(Default)]

@@ -50,7 +50,7 @@ describe('eywa-portal-solana', () => {
         )
         const synthesizeRequest = anchor.web3.Keypair.generate();
 
-        await program.state.rpc.new()
+        // await program.state.rpc.new()
         await program.state.rpc.synthesize(
             realToken,
             new anchor.BN(amount),
