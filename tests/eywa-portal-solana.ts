@@ -6,7 +6,6 @@ import {
     workspace,
 } from '@project-serum/anchor';
 const assert = require("assert");
-const serumCmn = require("@project-serum/common");
 const TokenInstructions = require("@project-serum/serum").TokenInstructions;
 const anchor = require('@project-serum/anchor');
 
@@ -101,9 +100,7 @@ describe('eywa-portal-solana', () => {
     });
 });
 
-
-
-async function createMint(provider, authority) {
+async function createMint(provider, authority?) {
     if (authority === undefined) {
         authority = provider.wallet.publicKey;
     }
@@ -155,7 +152,7 @@ async function createTokenAccountInstrs(
     newAccountPubkey,
     mint,
     owner,
-    lamports
+    lamports?
 ) {
     if (lamports === undefined) {
         lamports = await provider.connection.getMinimumBalanceForRentExemption(165);
