@@ -5,6 +5,7 @@ import {
     web3,
     workspace,
 } from '@project-serum/anchor';
+const assert = require("assert");
 const serumCmn = require("@project-serum/common");
 const TokenInstructions = require("@project-serum/serum").TokenInstructions;
 const anchor = require('@project-serum/anchor');
@@ -76,8 +77,31 @@ describe('eywa-portal-solana', () => {
                 ],
             }
         )
+
+        let synthesizeRequestAccount = await provider.connection.getAccountInfo(synthesizeRequest.publicKey);
+
+        assert.ok(synthesizeRequestAccount.data.slice(120, 128)[0] == 1)
+
+        await program.state.rpc.emergencyUnsynthesize(
+            synthesizeRequestAccount.data.slice(8, 40),
+            {
+                accounts: {
+                    synthesizeRequest: synthesizeRequest.publicKey,
+                    sourceAccount: destinationAccount,
+                    destinationAccount: sourceAccount,
+                    ownerAccount: owner.publicKey,
+                    splTokenAccount: splTokenKey,
+                }
+            }
+        )
+
+        synthesizeRequestAccount = await provider.connection.getAccountInfo(synthesizeRequest.publicKey);
+
+        assert.ok(synthesizeRequestAccount.data.slice(120, 128)[0] == 2)
     });
 });
+
+
 
 async function createMint(provider, authority) {
     if (authority === undefined) {

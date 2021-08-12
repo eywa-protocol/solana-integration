@@ -194,6 +194,7 @@ pub mod eywa_bridge_solana {
             bridge_nonce.serialize(&mut *ctx.accounts.bridge_nonce.try_borrow_mut_data()?)?;
 
             let synthesize_request = &mut ctx.accounts.synthesize_request;
+            synthesize_request.tx_id = tx_id;
             synthesize_request.recipient = ctx.accounts.source_account.key();
             synthesize_request.chain_to_address = chain_to_address;
             synthesize_request.real_token = real_token;
@@ -208,6 +209,48 @@ pub mod eywa_bridge_solana {
                 to: chain_to_address,
                 amount,
                 real_token,
+            };
+            emit!(event);
+
+            Ok(())
+        }
+
+        pub fn emergency_unsynthesize(
+            &self,
+            ctx: Context<Unsynthesize>,
+            tx_id: [u8; 32],
+        ) -> ProgramResult {
+            if *ctx.accounts.destination_account.key != ctx.accounts.synthesize_request.recipient {
+                msg!("Portal: destination account doesn't match with recipient");
+                msg!("{} {}", *ctx.accounts.destination_account.key, ctx.accounts.synthesize_request.recipient);
+                return ProgramResult::Err(ProgramError::InvalidAccountData);
+            }
+            if ctx.accounts.synthesize_request.tx_id != tx_id {
+                msg!("Portal: got synthesize_request account with another tx_id");
+                msg!("{:?} {:?}", ctx.accounts.synthesize_request.tx_id, tx_id);
+                return ProgramResult::Err(ProgramError::InvalidAccountData);
+            }
+            if ctx.accounts.synthesize_request.state != RequestState::Sent {
+                msg!("Portal:state not open or tx does not exist");
+                return ProgramResult::Err(ProgramError::InvalidAccountData);
+            }
+
+            ctx.accounts.synthesize_request.state = RequestState::Reverted;
+
+            let cpi_accounts = Transfer {
+                from: ctx.accounts.source_account.clone(),
+                to: ctx.accounts.destination_account.clone(),
+                authority: ctx.accounts.owner_account.clone(),
+            };
+            let cpi_program = ctx.accounts.spl_token_account.clone();
+            let cpi_ctx = CpiContext::new(cpi_program.clone(), cpi_accounts);
+            token::transfer(cpi_ctx, ctx.accounts.synthesize_request.amount)?;
+
+            let event = RevertSynthesizeCompleted {
+                id: tx_id,
+                to: ctx.accounts.synthesize_request.recipient,
+                amount: ctx.accounts.synthesize_request.amount,
+                token: ctx.accounts.synthesize_request.real_token,
             };
             emit!(event);
 
@@ -511,6 +554,19 @@ pub struct Synthesize<'info> {
     system_program: AccountInfo<'info>,
 }
 
+#[derive(Accounts)]
+pub struct Unsynthesize<'info> {
+    #[account(mut)]
+    pub synthesize_request: ProgramAccount<'info, SynthesizeRequestInfo>,
+    #[account(mut)]
+    source_account: AccountInfo<'info>,
+    #[account(mut)]
+    destination_account: AccountInfo<'info>,
+    #[account(signer, mut)]
+    owner_account: AccountInfo<'info>,
+    spl_token_account: AccountInfo<'info>,
+}
+
 // #endregion Portal
 
 #[error]
@@ -538,6 +594,7 @@ pub struct BridgeNonce {
 #[account]
 #[derive(Default)]
 pub struct SynthesizeRequestInfo {
+    tx_id: [u8; 32],
     recipient: Pubkey,
     chain_to_address: [u8; 20],
     real_token: [u8; 20],
@@ -565,7 +622,15 @@ pub struct OracleRequest {
     chain_id: u64,
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+#[event]
+pub struct RevertSynthesizeCompleted {
+    id: [u8; 32],
+    to: Pubkey,
+    amount: u64,
+    pub token: [u8; 20],
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq)]
 pub enum RequestState {
     Default,
     Sent,
