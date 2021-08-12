@@ -109,7 +109,7 @@ describe('eywa-bridge-solana', () => {
     }
   });
 
-  it("Init program settings", async () => {
+  it.skip("Init program settings", async () => {
     const program = workspace.EywaBridgeSolana;
 
     await program.state.rpc.new({
@@ -373,7 +373,7 @@ describe('eywa-bridge-solana', () => {
 
   });
 
-  it("Increments program settings.param", async () => {
+  it.skip("Increments program settings.param", async () => {
     const program = workspace.EywaBridgeSolana;
 
     await program.state.rpc.increment({
