@@ -117,11 +117,15 @@ pub mod eywa_bridge_solana {
     #[state]
     pub struct Portal {
         pub request_count: u64,
+        pub bridge: Pubkey,
     }
 
     impl Portal {
         pub fn new(_ctx: Context<PortalInit>) -> Result<Self> {
-            Ok(Self { request_count: 0 })
+            Ok(Self {
+                request_count: 0,
+                bridge: _ctx.accounts.bridge.key(),
+            })
         }
         pub fn synthesize(
             &mut self,
@@ -217,12 +221,15 @@ pub mod eywa_bridge_solana {
 
         pub fn emergency_unsynthesize(
             &self,
-            ctx: Context<Unsynthesize>,
+            ctx: Context<EmergencyUnsynthesize>,
             tx_id: [u8; 32],
         ) -> ProgramResult {
+            if *ctx.accounts.bridge.key != self.bridge {
+                msg!("Portal: required bridge signature");
+                return ProgramResult::Err(ProgramError::InvalidAccountData);
+            }
             if *ctx.accounts.destination_account.key != ctx.accounts.synthesize_request.recipient {
                 msg!("Portal: destination account doesn't match with recipient");
-                msg!("{} {}", *ctx.accounts.destination_account.key, ctx.accounts.synthesize_request.recipient);
                 return ProgramResult::Err(ProgramError::InvalidAccountData);
             }
             if ctx.accounts.synthesize_request.tx_id != tx_id {
@@ -251,6 +258,58 @@ pub mod eywa_bridge_solana {
                 to: ctx.accounts.synthesize_request.recipient,
                 amount: ctx.accounts.synthesize_request.amount,
                 token: ctx.accounts.synthesize_request.real_token,
+            };
+            emit!(event);
+
+            Ok(())
+        }
+
+        pub fn unsynthesize(
+            &self,
+            ctx: Context<Unsynthesize>,
+            token: Pubkey,
+            tx_id: String,
+            amount: u64,
+        ) -> ProgramResult {
+            if *ctx.accounts.bridge.key != self.bridge {
+                msg!("Portal: required bridge signature");
+                return ProgramResult::Err(ProgramError::InvalidAccountData);
+            }
+
+            let mut unsynthesize_state: UnsynthesizeStatesInfo = get_or_create_account_data(
+                &ctx.accounts.unsynthesize_state,
+                &ctx.accounts.states_master_account,
+                &ctx.accounts.system_program,
+                &ctx.accounts.rent,
+                1,
+                tx_id.as_str(),
+                &[],
+                ctx.program_id,
+            )?;
+            msg!("{:?}", unsynthesize_state);
+            if unsynthesize_state.state != UnsynthesizeStates::Default {
+                msg!("Portal: syntatic tokens emergencyUnburn");
+                return ProgramResult::Err(ProgramError::InvalidArgument);
+            }
+
+            let cpi_accounts = Transfer {
+                from: ctx.accounts.source_account.clone(),
+                to: ctx.accounts.destination_account.clone(),
+                authority: ctx.accounts.owner_account.clone(),
+            };
+            let cpi_program = ctx.accounts.spl_token_account.clone();
+            let cpi_ctx = CpiContext::new(cpi_program.clone(), cpi_accounts);
+            token::transfer(cpi_ctx, amount)?;
+
+            unsynthesize_state.state = UnsynthesizeStates::Unsynthesized;
+            unsynthesize_state
+                .serialize(&mut *ctx.accounts.unsynthesize_state.try_borrow_mut_data()?)?;
+
+            let event = BurnCompleted {
+                id: tx_id,
+                to: *ctx.accounts.destination_account.key,
+                amount,
+                token,
             };
             emit!(event);
 
@@ -328,7 +387,7 @@ where
         ];
         anchor_lang::solana_program::program::invoke_signed(&ix, &accounts, seeds)?;
     }
-
+    msg!("{:?}", data_account.data);
     Ok(T::try_from_slice(*data_account.data.borrow())?)
 }
 
@@ -444,7 +503,10 @@ pub struct Auth<'info> {
 }
 
 #[derive(Accounts)]
-pub struct PortalInit {}
+pub struct PortalInit<'info> {
+    #[account(signer)]
+    bridge: AccountInfo<'info>,
+}
 
 // #endregion for methods
 // #region for functions
@@ -538,7 +600,7 @@ pub struct EmergencyUnburn<'info> {
 #[derive(Accounts)]
 pub struct Synthesize<'info> {
     #[account(init)]
-    pub synthesize_request: ProgramAccount<'info, SynthesizeRequestInfo>,
+    synthesize_request: ProgramAccount<'info, SynthesizeRequestInfo>,
     #[account(mut)]
     source_account: AccountInfo<'info>,
     #[account(mut)]
@@ -555,9 +617,9 @@ pub struct Synthesize<'info> {
 }
 
 #[derive(Accounts)]
-pub struct Unsynthesize<'info> {
+pub struct EmergencyUnsynthesize<'info> {
     #[account(mut)]
-    pub synthesize_request: ProgramAccount<'info, SynthesizeRequestInfo>,
+    synthesize_request: ProgramAccount<'info, SynthesizeRequestInfo>,
     #[account(mut)]
     source_account: AccountInfo<'info>,
     #[account(mut)]
@@ -565,6 +627,27 @@ pub struct Unsynthesize<'info> {
     #[account(signer, mut)]
     owner_account: AccountInfo<'info>,
     spl_token_account: AccountInfo<'info>,
+    #[account(signer)]
+    bridge: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct Unsynthesize<'info> {
+    #[account(mut)]
+    unsynthesize_state: AccountInfo<'info>,
+    #[account(mut, signer)]
+    states_master_account: AccountInfo<'info>,
+    #[account(mut)]
+    source_account: AccountInfo<'info>,
+    #[account(mut)]
+    destination_account: AccountInfo<'info>,
+    #[account(signer, mut)]
+    owner_account: AccountInfo<'info>,
+    spl_token_account: AccountInfo<'info>,
+    system_program: AccountInfo<'info>,
+    rent: Sysvar<'info, Rent>,
+    #[account(signer)]
+    bridge: AccountInfo<'info>,
 }
 
 // #endregion Portal
@@ -602,6 +685,25 @@ pub struct SynthesizeRequestInfo {
     state: RequestState,
 }
 
+#[account]
+#[derive(Default, Debug)]
+pub struct UnsynthesizeStatesInfo {
+    state: UnsynthesizeStates,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Debug)]
+pub enum UnsynthesizeStates {
+    Default,
+    Unsynthesized,
+    RevertRequest,
+}
+
+impl Default for UnsynthesizeStates {
+    fn default() -> Self {
+        UnsynthesizeStates::Default
+    }
+}
+
 #[event]
 pub struct SynthesizeRequest {
     id: [u8; 32],
@@ -627,7 +729,15 @@ pub struct RevertSynthesizeCompleted {
     id: [u8; 32],
     to: Pubkey,
     amount: u64,
-    pub token: [u8; 20],
+    token: [u8; 20],
+}
+
+#[event]
+pub struct BurnCompleted {
+    id: String,
+    to: Pubkey,
+    amount: u64,
+    token: Pubkey,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq)]
