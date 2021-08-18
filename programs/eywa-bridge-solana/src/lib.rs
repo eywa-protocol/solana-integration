@@ -80,39 +80,7 @@ pub mod eywa_bridge_solana {
         Ok(())
     }
 
-    pub fn create_token(ctx: Context<CreateToken>) -> ProgramResult {
-        let token = &mut ctx.accounts.token;
-        token.amount = 0;
-        token.authority = *ctx.accounts.authority.key;
-        token.mint = *ctx.accounts.mint.to_account_info().key;
-
-        Ok(())
-    }
-
-    // #region Syntesise
-
-    pub fn create_representation(
-        ctx: Context<CreateRepresentation>,
-        token_real: [u8; 20], // String, // H160, // real token for synt
-        token_synt: Pubkey,
-        synt_name: String,   // synt name
-        synt_symbol: String, // synt short name
-        synt_decimals: u8,
-    ) -> ProgramResult {
-        // onlyOwner
-        // synthesizer
-        ctx.accounts.mint_data.supply = 0;
-        ctx.accounts.mint_data.name = synt_name;
-        ctx.accounts.mint_data.symbol = synt_symbol;
-        ctx.accounts.mint_data.token_real = token_real;
-        ctx.accounts.mint_data.token_synt = token_synt; // ctx.accounts.mint.key();
-        ctx.accounts.mint_data.decimals = synt_decimals;
-
-        Ok(())
-    }
-
-    // #endregion Syntesise
-    // #region Portal
+        // #region Portal
 
     #[state]
     pub struct Portal {
@@ -234,7 +202,6 @@ pub mod eywa_bridge_solana {
             }
             if ctx.accounts.synthesize_request.tx_id != tx_id {
                 msg!("Portal: got synthesize_request account with another tx_id");
-                msg!("{:?} {:?}", ctx.accounts.synthesize_request.tx_id, tx_id);
                 return ProgramResult::Err(ProgramError::InvalidAccountData);
             }
             if ctx.accounts.synthesize_request.state != RequestState::Sent {
@@ -316,9 +283,47 @@ pub mod eywa_bridge_solana {
             Ok(())
         }
     }
-}
+    // #endregion Portal
 
-// #endregion Portal
+    pub fn create_mint(ctx: Context<CreateMint>) -> ProgramResult {
+        ctx.accounts.mint.supply = 0;
+        Ok(())
+    }
+
+    pub fn create_token(ctx: Context<CreateToken>) -> ProgramResult {
+        let token = &mut ctx.accounts.token;
+        token.amount = 0;
+        token.authority = *ctx.accounts.authority.key;
+        token.mint = *ctx.accounts.mint.to_account_info().key;
+
+        Ok(())
+    }
+
+    // #region Syntesise
+
+    pub fn create_representation(
+        ctx: Context<CreateRepresentation>,
+        token_real: [u8; 20], // String, // H160, // real token for synt
+        token_synt: Pubkey,
+        synt_name: String,   // synt name
+        synt_symbol: String, // synt short name
+        synt_decimals: u8,
+    ) -> ProgramResult {
+        // onlyOwner
+        // synthesizer
+        ctx.accounts.mint_data.supply = 0;
+        ctx.accounts.mint_data.name = synt_name;
+        ctx.accounts.mint_data.symbol = synt_symbol;
+        ctx.accounts.mint_data.token_real = token_real;
+        ctx.accounts.mint_data.token_synt = token_synt; // ctx.accounts.mint.key();
+        ctx.accounts.mint_data.decimals = synt_decimals;
+
+        Ok(())
+    }
+
+    // #endregion Syntesise
+
+}
 
 pub fn transmit_request(
     selector: &[u8],
@@ -387,7 +392,7 @@ where
         ];
         anchor_lang::solana_program::program::invoke_signed(&ix, &accounts, seeds)?;
     }
-    msg!("{:?}", data_account.data);
+
     Ok(T::try_from_slice(*data_account.data.borrow())?)
 }
 
@@ -660,12 +665,6 @@ pub enum ErrorCode {
     UntrustedDex,
     #[msg("This is an error message clients will automatically display 1234")]
     Test = 1234,
-}
-
-#[account]
-#[derive(Default)]
-pub struct SynthesizeInfo {
-    request_count: u64,
 }
 
 #[account]

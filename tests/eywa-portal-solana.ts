@@ -46,6 +46,7 @@ describe('eywa-portal-solana', () => {
         let receiveSide = [0, 1, 2, 3, 4, 5, 6, 7, 8]
         let oppositeBridge = [0, 1, 2, 3, 4, 5, 6, 7, 8]
         let chainId = 14
+
         let nonceMasterAccount = new anchor.web3.Account();
         await provider.connection.confirmTransaction(
             await provider.connection.requestAirdrop(nonceMasterAccount.publicKey, 10000000000),
@@ -58,7 +59,7 @@ describe('eywa-portal-solana', () => {
             program.programId
         )
         const synthesizeRequest = anchor.web3.Keypair.generate();
-        
+
         await program.state.rpc.synthesize(
             realToken,
             new anchor.BN(amount),
@@ -162,7 +163,6 @@ describe('eywa-portal-solana', () => {
     });
 });
 
-
 async function createMint(provider, authority) {
     if (authority === undefined) {
         authority = provider.wallet.publicKey;
@@ -215,7 +215,7 @@ async function createTokenAccountInstrs(
     newAccountPubkey,
     mint,
     owner,
-    lamports
+    lamports?
 ) {
     if (lamports === undefined) {
         lamports = await provider.connection.getMinimumBalanceForRentExemption(165);
