@@ -157,9 +157,42 @@ describe('eywa-portal-solana', () => {
             }
         )
 
-
         let unsynthesizeStateInfo = await provider.connection.getAccountInfo(unsynthesizeState);
         assert.ok(unsynthesizeStateInfo.data[0] == 1)
+
+        let receiveSide = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+        let oppositeBridge = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+        let chainId = 14
+        let nonceMasterAccount = new anchor.web3.Account();
+        await provider.connection.confirmTransaction(
+            await provider.connection.requestAirdrop(nonceMasterAccount.publicKey, 10000000000),
+            "confirmed"
+        );
+
+        const bridgeNonce = await anchor.web3.PublicKey.createWithSeed(
+            nonceMasterAccount.publicKey,
+            oppositeBridge.toString(),
+            program.programId
+        )
+
+        await program.state.rpc.emergencyUnburnRequest(
+            tx_id,
+            receiveSide,
+            oppositeBridge,
+            new anchor.BN(chainId),
+            {
+                accounts: {
+                    unsynthesizeState: unsynthesizeState,
+                    statesMasterAccount: statesMasterAccount.publicKey,
+                    nonceMasterAccount: nonceMasterAccount.publicKey,
+                    bridgeNonce,
+                    messageSender: owner.publicKey,
+                    rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+                    systemProgram: anchor.web3.SystemProgram.programId,
+                },
+                signers: [nonceMasterAccount, statesMasterAccount]
+            },
+        )
     });
 });
 
