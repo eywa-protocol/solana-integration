@@ -1,34 +1,58 @@
-// use anchor_lang::prelude::*;
-use std::str;
-
-use anchor_lang::prelude::borsh::BorshDeserialize;
-use anchor_lang::solana_program::{keccak, system_program};
 use anchor_lang::{
+    Key,
     prelude::*,
-    solana_program::program_error::ProgramError,
-    // AccountSerialize,
-    // AccountDeserialize,
-    // spl_token,
+    prelude::borsh::BorshDeserialize,
+    solana_program::{
+        instruction::Instruction,
+        keccak,
+        program_error::ProgramError,
+        program::{
+            invoke,
+            // invoke_signed,
+        },
+        system_program,
+    },
+    AnchorSerialize,
+    AnchorDeserialize,
 };
-use anchor_spl::token::{self, Transfer};
+use anchor_spl::token::{
+    self,
+    // Mint,
+    // TokenAccount,
+    Transfer,
+};
+use spl_token::ID as SPL_TOKEN_PID;
 
-// use anchor_spl::token as anchor_spl_token;
-// use spl_token::{
-//     ID as SPL_TOKEN_PID,
-// };
+/*
+pub fn read_u8(current: &mut usize, data: &[u8]) -> Result<u8> {
+    if data.len() < *current + 1 {
+        return Err(ErrorCode::IndexOutOfBounds.into());
+    }
+    let e = data[*current];
+    *current += 1;
+    Ok(e)
+}
+
+pub fn read_pubkey(current: &mut usize, data: &[u8]) -> Result<Pubkey> {
+    let len = std::mem::size_of::<Pubkey>();
+    if data.len() < *current + len {
+        return Err(ErrorCode::IndexOutOfBounds.into());
+    }
+    let e = Pubkey::new(&data[*current..*current + len]);
+    *current += len;
+    Ok(e)
+}
+*/
 
 #[program]
 pub mod eywa_bridge_solana {
     use super::*;
-    use anchor_lang::prelude::borsh::BorshSerialize;
-    use anchor_lang::solana_program::keccak;
-    use anchor_lang::Key;
 
     // Singleton Data Account
     #[state]
     pub struct Settings {
         pub owner: Pubkey,
-        pub param: u64,
+        // pub param: u64,
         // address public _listNode;
         // uint256 public requestCount = 1;
         pub portal_request_count: u64,
@@ -38,12 +62,13 @@ pub mod eywa_bridge_solana {
         pub fn new(ctx: Context<Auth>) -> Result<Self> {
             Ok(Self {
                 owner: *ctx.accounts.owner.key,
-                param: 100,
+                // param: 100,
                 portal_request_count: 0,
                 bridge: ctx.accounts.bridge.key(),
             })
         }
 
+    /*
         pub fn increment(&mut self, ctx: Context<Auth>) -> Result<()> {
             if &self.owner != ctx.accounts.owner.key {
                 return Err(ErrorCode::Unauthorized.into());
@@ -51,7 +76,6 @@ pub mod eywa_bridge_solana {
             self.param += 1;
             Ok(())
         }
-    /*
     }
 
         // #region Portal
@@ -70,6 +94,22 @@ pub mod eywa_bridge_solana {
             })
         }
     */
+
+        // #region Portal
+
+        /*
+            Тут к нам прилетают заапрувленные SPLки мы их забираем на свой аккаунт и
+            через бридж сообщаем эфириумному синтезису, что надо генерить синты.
+            Запоминаем id отправленной синтезису транзы, чтобы далее мониторить её состояние.
+
+            На входе нам нужно:
+            1. id (pubkey) spl-token`а и pubkey юзера, чтобы рассчитать аккаунт, с которого забирать
+            2. Кол-во токенов
+            3. chain_id
+            4. адрес синтезиса в chain_id чейне
+            5. адрес кошелька юзера в chain_id чейне
+            6. адрес бриджа в chain_id чейне
+        */
         pub fn synthesize(
             &mut self,
             ctx: Context<Synthesize>,
@@ -80,6 +120,60 @@ pub mod eywa_bridge_solana {
             opposite_bridge: [u8; 20],
             chain_id: u64,
         ) -> ProgramResult {
+            /*
+            // Залочить SPLки
+            TransferHelper.safeTransferFrom(_token, _msgSender(), address(this), _amount);
+            // Запомнить состояние
+            balanceOf[_token] = balanceOf[_token].add(_amount);
+
+            // посчитать внутренний идентификатор
+            txID = keccak256(abi.encodePacked(this, requestCount));
+
+            // сгенерировать вызов
+            bytes memory out  = abi.encodeWithSelector(bytes4(
+                keccak256(bytes('mintSyntheticToken(bytes32,address,uint256,address)'))
+            ), txID, _token, _amount, _chain2address);
+            // и передать наружу бэкенду
+            IBridge(bridge).transmitRequestV2(out,_receiveSide, _oppositeBridge, _chainID);
+            //  transmitRequestV2(
+                    bytes memory _selector,
+                    address receiveSide,
+                    address oppositeBridge,
+                    uint chainId
+                ) onlyTrustedDex
+            bytes32 requestId = prepareRqId(_selector, receiveSide, oppositeBridge, chainId);
+            //  function prepareRqId(
+                    bytes memory  _selector,
+                    address receiveSide,
+                    address oppositeBridge,
+                    uint chainId
+                )
+            bytes32 requestId = keccak256(
+                abi.encodePacked(this, nonce[oppositeBridge], _selector, receiveSide, oppositeBridge, chainId));
+            nonce[oppositeBridge] = nonce[oppositeBridge] + 1;
+
+            emit!(EvOracleRequest {
+                "setRequest",
+                address(this),
+                requestId,
+                _selector,
+                receiveSide,
+                oppositeBridge,
+                chainId,
+            });
+            // end transmitRequestV2
+            TxState storage txState = requests[txID];
+            txState.recipient    = _msgSender();
+            txState.chain2address    = _chain2address;
+            txState.rtoken     = _token;
+            txState.amount     = _amount;
+            txState.state = RequestState.Sent;
+
+            requestCount +=1;
+
+            emit EvSynthesizeRequest(txID, _msgSender(), _chain2address, _amount, _token);
+            */
+
             let cpi_accounts = Transfer {
                 from: ctx.accounts.source_account.clone(),
                 to: ctx.accounts.destination_account.clone(),
@@ -150,8 +244,8 @@ pub mod eywa_bridge_solana {
 
             self.portal_request_count += 1;
 
-            let event = SynthesizeRequest {
-                id: tx_id,
+            let event = EvSynthesizeRequest {
+                tx_id,
                 from: ctx.accounts.source_account.key(),
                 to: chain_to_address,
                 amount,
@@ -162,6 +256,19 @@ pub mod eywa_bridge_solana {
             Ok(())
         }
 
+
+        /*
+            can called only by bridge after initiation on a second chain
+
+            Тут к нам прилетают через бридж отмены лока SPLек.
+            Изменяем статус отправленной синтезису транзы по ранее сохранённому id.
+            Возвращаем SPLки со своего аккаунта обратно владельцу.
+
+            На входе нам нужно:
+            1. tx_id, которую отменяем, остальное мы должны хранить сами
+
+            onlyBridge
+        */
         pub fn emergency_unsynthesize(
             &self,
             ctx: Context<EmergencyUnsynthesize>,
@@ -197,7 +304,7 @@ pub mod eywa_bridge_solana {
             let cpi_ctx = CpiContext::new(cpi_program.clone(), cpi_accounts);
             token::transfer(cpi_ctx, ctx.accounts.synthesize_request.amount)?;
 
-            let event = RevertSynthesizeCompleted {
+            let event = EvRevertSynthesizeCompleted {
                 id: tx_id,
                 to: ctx.accounts.synthesize_request.recipient,
                 amount: ctx.accounts.synthesize_request.amount,
@@ -207,7 +314,6 @@ pub mod eywa_bridge_solana {
 
             Ok(())
         }
-    // #endregion Portal
     /*
     pub fn initialize(ctx: Context<Initialize>, admin: Pubkey, data: u64) -> ProgramResult {
         let acc_data = &mut ctx.accounts.data;
@@ -240,7 +346,25 @@ pub mod eywa_bridge_solana {
         Ok(())
     }
     */
-        pub fn unsynthesize(
+
+        // synthesizeWithPermit – позже подумаем
+
+        /*
+            Тут к нам прилетают через бридж запросы на разлок SPLек при бёрнинге синтов.
+            Проверяем состояние внешней tx_id в нашем аакаунте (должно быть Default)
+            Отправляем SPLки со своего аккаунта обратно владельцу.
+            Устанавливаем состояние внешней tx_id в нашем аакаунте в Unsynthesized
+
+            На входе нам нужно:
+            1. tx_id, для реплэй протекшена
+            2. Кол-во токенов
+            3. id (pubkey) spl-token`а и pubkey юзера, чтобы рассчитать аккаунты
+
+            can called only by bridge after initiation on a second chain
+
+            onlyBridge
+        */
+        pub fn unsynthesize( // BurnCompleted
             &self,
             ctx: Context<Unsynthesize>,
             token: Pubkey,
@@ -291,6 +415,22 @@ pub mod eywa_bridge_solana {
             Ok(())
         }
 
+        /*
+            Revert burnSyntheticToken() operation, can be called several times
+
+            Запрос от пользователя на отмену сжигания (разлока ???) SPLек.
+            Реплей протекшн по состоянию Unsynthesized на оное действо.
+            Устанавливаем состояние внешней tx_id в нашем аккаунте в RevertRequest.
+            Отправляем в эфириум транзу с вызовом emergencyUnburn через бридж.
+
+            На входе нам нужно:
+            1. tx_id, для реплэй протекшена
+            3. chain_id
+            4. адрес синтезиса в chain_id чейне
+            6. адрес бриджа в chain_id чейне
+
+            RevertBurnRequest
+        */
         pub fn emergency_unburn_request(
             &self,
             ctx: Context<EmergencyUnburnRequest>,
@@ -361,8 +501,9 @@ pub mod eywa_bridge_solana {
 
             Ok(())
         }
-    }
-    // #endregion Portal
+
+        // #endregion Portal
+        // #region Bridge
 
     /*
     pub fn create_token(ctx: Context<CreateToken>) -> ProgramResult {
@@ -375,29 +516,284 @@ pub mod eywa_bridge_solana {
     }
     */
 
+        /*
+            function receiveRequestV2(
+                bytes32 reqId,
+                bytes memory b,
+                address receiveSide,
+                address bridgeFrom
+            ) external onlyTrustedNode {
+
+                // TODO check and repair this function
+                // bytes32 recreateReqId = keccak256(abi.encodePacked(bridgeFrom, nonce[bridgeFrom], b, receiveSide, this, block.chainId));
+                // require(reqId == recreateReqId, 'CONSISTENCY FAILED');
+                require(dexBind[receiveSide] == true, 'UNTRUSTED DEX');
+
+                (bool success, bytes memory data) = receiveSide.call(b);
+                require(success && (data.length == 0 || abi.decode(data, (bool))), 'FAILED');
+
+                nonce[bridgeFrom] = nonce[bridgeFrom] + 1;
+
+                emit ReceiveRequest(reqId, receiveSide, reqId);
+            }
+        */
+        pub fn receive_request(
+            &mut self,
+            ctx: Context<ReceiveRequest>,
+            req_id: [u8; 32], // bytes32 reqId,
+            sinst: StandaloneInstruction,
+            // bytes memory b, address receiveSide,
+            bridge_from: [u8; 20], // address bridgeFrom
+        ) -> Result<()> {
+            // use std::convert::*;
+            // TODO: check whether the sender is included in the list of trusted nodes
+            // TODO: check pidTarget
+            msg!("{}", format!("bridge_from: {:?}", bridge_from));
+            msg!("{}", format!("req_id: {:?}", req_id));
+
+            let ix = Instruction {
+                program_id: sinst.program_id,
+                accounts: sinst
+                .accounts
+                .iter()
+                .map(|acc| {
+                    msg!("{}", format!("acc.pubkey: {}", acc.pubkey));
+                    if acc.is_writable {
+                        AccountMeta::new(acc.pubkey, acc.is_signer)
+                    } else {
+                        AccountMeta::new_readonly(acc.pubkey, acc.is_signer)
+                    }
+                })
+                .collect(),
+                data: sinst.data,
+            };
+
+            let seeds = &[
+                b"receive-request-seed".as_ref(),
+            ];
+            let signer = &[&seeds[..]];
+
+            solana_program::program::invoke_signed(
+                &ix,
+                &ctx.remaining_accounts,
+                signer,
+            )?;
+
+            // nonce[bridgeFrom] = nonce[bridgeFrom] + 1;
+
+            emit!(EvReceiveRequest {
+                req_id,
+                receive_side: sinst.program_id,
+                tx_id: req_id, // ???
+            });
+            msg!("EvReceiveRequest {:?}", req_id);
+
+            Ok(())
+        }
+    }
+
+    // #endregion Bridge
     // #region Syntesise
 
+    // onlyOwner
     pub fn create_representation(
         ctx: Context<CreateRepresentation>,
+        bump_seed_data: u8,
+        bump_seed_mint: u8,
         token_real: [u8; 20], // String, // H160, // real token for synt
-        token_synt: Pubkey,
+        // token_synt: Pubkey,
         synt_name: String,   // synt name
         synt_symbol: String, // synt short name
         synt_decimals: u8,
     ) -> ProgramResult {
-        // onlyOwner
-        // synthesizer
+        msg!("{}", format!(
+            "\nbump_seed_data: {}\nbump_seed_mint: {}\n",
+            bump_seed_data,
+            bump_seed_mint,
+        ));
+
+        let ix_init_mint = &spl_token::instruction::initialize_mint(
+            &SPL_TOKEN_PID,
+            &ctx.accounts.mint.key(),
+            &ctx.accounts.owner.key(),
+            Some(&ctx.accounts.owner.key()),
+            synt_decimals,
+        )?;
+        invoke(
+            &ix_init_mint,
+            &[
+                ctx.accounts.mint.clone(),
+                ctx.accounts.rent.to_account_info(),
+                ctx.accounts.token_program.clone(),
+            ],
+        )?;
+
         ctx.accounts.mint_data.supply = 0;
         ctx.accounts.mint_data.name = synt_name;
         ctx.accounts.mint_data.symbol = synt_symbol;
         ctx.accounts.mint_data.token_real = token_real;
-        ctx.accounts.mint_data.token_synt = token_synt; // ctx.accounts.mint.key();
+        ctx.accounts.mint_data.token_synt = ctx.accounts.mint.key();
         ctx.accounts.mint_data.decimals = synt_decimals;
 
         Ok(())
     }
 
+    /*
+    pub fn create_spl_associated_account(
+        ctx: Context<CreateSplAssociatedAccount>,
+        nonce: u8,
+    ) -> ProgramResult {
+        let message = format!(
+            "\n1111111111 nonce: {}\n", nonce
+        );
+        msg!("{}", message);
+
+        if ctx.accounts.account.data_is_empty() {
+            let space = 20000;
+            let rent = &Rent::from_account_info(&ctx.accounts.rent.to_account_info())?;
+            let lamports = rent.minimum_balance(space);
+            // let signer_seeds: &[&[_]] = &[b"escrow"];
+            // let pda = Pubkey::create_with_seed(ctx.accounts.mint.key, "escrow", ctx.program_id)?;
+            let (_pda, bump_seed) = Pubkey::find_program_address(&[b"escrow"], ctx.program_id);
+            let seeds = &[&b"escrow"[..], &[bump_seed]];
+
+            let message = format!(
+                "\n1111111111PDA: {}\n", _pda
+            );
+            msg!("{}", message);
+
+
+            invoke_signed(
+                &system_instruction::create_account(
+                    ctx.accounts.owner.key,
+                    ctx.accounts.account.key,
+                    lamports,
+                    space as u64,
+                    ctx.accounts.spl_program.key,
+                ),
+                &[ctx.accounts.owner.clone(), ctx.accounts.account.clone(), ctx.accounts.system_program.clone()],
+                &[&seeds[..]],
+            )?;
+
+        let message = format!(
+            "\0000000000000000000000: {}\n", ctx.accounts.token_program.key
+        );
+        msg!("{}", message);
+
+        }
+        let message = format!(
+            "\n1111111111Program_id: {}\n", ctx.accounts.spl_program.key
+        );
+        msg!("{}", message);
+
+        let cpi_accounts = InitializeAccount {
+            account: ctx.accounts.account.clone(),
+            mint: ctx.accounts.mint.clone(),
+            authority: ctx.accounts.owner.clone(),
+            rent: ctx.accounts.rent.to_account_info(),
+        };
+        let cpi_program = ctx.accounts.spl_program.clone();
+        // let cpi_ctx = CpiContext::new_with_signer(cpi_program.clone(), cpi_accounts, &[&[b"escrow"]]);
+        let cpi_ctx = CpiContext::new(cpi_program.clone(), cpi_accounts);
+        token::initialize_account(cpi_ctx)?;
+
+        Ok(())
+    }
+    */
+
+    pub fn mint_synthetic_token(
+        ctx: Context<MintSyntheticToken>,
+        tx_id: [u8; 32],   // H256, // id for repley protection
+        token_real: [u8; 20], // real token for synt
+        amount: u64, // от 0 до 18 446 744 073 709 551 615
+        to: Pubkey, // destination for minting synt
+    ) -> ProgramResult { // onlyOwner
+        let message = format!(
+            "MintSyntheticToken: tx_id={:?}, token_real={:?}, amount={}, to={}",
+            tx_id, token_real, amount, to,
+        );
+        msg!("{}", message);
+
+        let cpi_ctx = CpiContext::new(
+            ctx.accounts.token_program.clone(),
+            token::MintTo {
+                mint: ctx.accounts.mint.clone(),
+                to: ctx.accounts.to.clone(),
+                authority: ctx.accounts.this_program.clone(),
+            }
+        );
+        token::mint_to(cpi_ctx, amount)?;
+
+        Ok(())
+    }
+
+    pub fn emergency_unsyntesize_request(
+        ctx: Context<EmergencyUnsyntesizeRequest>,
+        tx_id: [u8; 32],   // H256, // id for repley protection
+    ) -> ProgramResult {
+        let token_real = ctx.accounts.mint_data.token_real;
+        let message = format!(
+            "EmergencyUnsyntesizeRequest: tx_id={:?}, token_real={:?}",
+            tx_id, token_real,
+        );
+        msg!("{}", message);
+
+        Ok(())
+    }
+
+    pub fn burn_synthetic_token(
+        ctx: Context<BurnSyntheticToken>,
+        tx_id: [u8; 32],   // H256, // id for repley protection
+        amount: u64,
+        // chain2address ???
+        // moved to ctx.accounts.mint_data // token_real: [u8; 20], // real token for synt
+    ) -> ProgramResult {
+        let token_real = ctx.accounts.mint_data.token_real;
+        let message = format!(
+            "BurnSyntheticToken: tx_id={:?}, token_real={:?}",
+            tx_id, token_real,
+        );
+        msg!("{}", message);
+
+        Ok(())
+    }
+
+    pub fn emergency_unburn( // onlyBridge
+        ctx: Context<EmergencyUnburn>,
+        tx_id: [u8; 32],   // H256, // id for repley protection
+    ) -> ProgramResult {
+        let token_real = ctx.accounts.mint_data.token_real;
+        let message = format!(
+            "EmergencyUnburn: tx_id={:?}, token_real={:?}",
+            tx_id, token_real,
+        );
+        msg!("{}", message);
+
+        Ok(())
+    }
+
     // #endregion Syntesise
+
+    pub fn hello(
+        ctx: Context<Hello>,
+        name: String,
+    ) -> ProgramResult { // onlyOwner
+        let message = format!(
+            "Hello, {}!\n{}",
+            name,
+            ctx.accounts.person.key,
+        );
+        msg!("\n{}", message);
+
+        Ok(())
+    }
+
+}
+
+#[derive(Accounts)]
+pub struct Hello<'info> {
+    // #[account(signer)]
+    person: AccountInfo<'info>,
 }
 
 pub fn transmit_request(
@@ -423,7 +819,7 @@ pub fn transmit_request(
     );
     let request_id = hasher.result().0;
     *nonce += 1;
-    let oracle_request = OracleRequest {
+    let oracle_request = EvOracleRequest{
         request_type: "setRequest".to_string(),
         bridge: *bridge,
         request_id,
@@ -433,6 +829,62 @@ pub fn transmit_request(
         chain_id,
     };
     emit!(oracle_request);
+}
+
+pub fn create_account<'info>(
+    data_account: &AccountInfo<'info>,
+    master_account: &AccountInfo<'info>,
+    system_program: &AccountInfo<'info>,
+    rent: &Sysvar<'info, Rent>,
+    space: u64,
+    seed: &[&[&[u8]]],
+) -> ProgramResult {
+    let lamports = rent.minimum_balance(std::convert::TryInto::try_into(space).unwrap());
+    let ix = anchor_lang::solana_program::system_instruction::create_account(
+        master_account.key,
+        data_account.key,
+        lamports,
+        space,
+        master_account.owner,
+    );
+
+    let accounts = [
+        master_account.clone(),
+        data_account.clone(),
+        system_program.clone(),
+    ];
+
+    anchor_lang::solana_program::program::invoke_signed(&ix, &accounts, seed)
+}
+
+pub fn create_account_with_seed<'info>(
+    data_account: &AccountInfo<'info>,
+    master_account: &AccountInfo<'info>,
+    system_program: &AccountInfo<'info>,
+    rent: &Sysvar<'info, Rent>,
+    space: u64,
+    seed: &str,
+    seeds: &[&[&[u8]]],
+    program_id: &Pubkey,
+) -> ProgramResult {
+    let lamports = rent.minimum_balance(std::convert::TryInto::try_into(space).unwrap());
+    let ix = anchor_lang::solana_program::system_instruction::create_account_with_seed(
+        master_account.key,
+        data_account.key,
+        master_account.key,
+        seed,
+        lamports,
+        space,
+        program_id,
+    );
+
+    let accounts = [
+        master_account.clone(),
+        data_account.clone(),
+        system_program.clone(),
+    ];
+
+    anchor_lang::solana_program::program::invoke_signed(&ix, &accounts, seeds)
 }
 
 pub fn get_or_create_account_data<'info, T>(
@@ -449,6 +901,7 @@ where
     T: AccountSerialize + AccountDeserialize + Clone + BorshDeserialize,
 {
     if *data_account.owner == system_program::ID {
+        /*
         let lamports = rent.minimum_balance(std::convert::TryInto::try_into(space).unwrap());
         let ix = anchor_lang::solana_program::system_instruction::create_account_with_seed(
             master_account.key,
@@ -456,8 +909,17 @@ where
             master_account.key,
             seed,
             lamports,
+        */
+        create_account_with_seed(
+            data_account,
+            master_account,
+            system_program,
+            rent,
             space,
+            seed,
+            seeds,
             program_id,
+        /*
         );
 
         let accounts = [
@@ -466,6 +928,8 @@ where
             system_program.clone(),
         ];
         anchor_lang::solana_program::program::invoke_signed(&ix, &accounts, seeds)?;
+        */
+        )?;
     }
 
     Ok(T::try_from_slice(*data_account.data.borrow())?)
@@ -494,7 +958,29 @@ pub struct MyEvent {
     );
 */
 #[event]
-pub struct EvOracleRequest {}
+pub struct EvOracleRequest {
+    request_type: String,
+    bridge: Pubkey,
+    request_id: [u8; 32],
+    selector: Vec<u8>,
+    receive_side: [u8; 20],
+    opposite_bridge: [u8; 20],
+    chain_id: u64,
+}
+
+/*
+    event ReceiveRequest(
+        bytes32 reqId,
+        address receiveSide,
+        bytes32 tx
+    );
+*/
+#[event]
+pub struct EvReceiveRequest {
+    req_id: [u8; 32],
+    receive_side: Pubkey,
+    tx_id: [u8; 32],
+}
 
 // #endregion Bridge
 // #region Portal
@@ -512,10 +998,27 @@ pub struct EvOracleRequest {}
 pub struct EvSynthesizeRequest {
     #[index]
     tx_id: [u8; 32], // H256, // id for repley protection
-                     // address indexed _from, // msgSender
-                     // address indexed _to, // chain2address
-                     // amount: u64,
-                     // address _token
+    from: Pubkey, // msgSender
+    to: [u8; 20], // chain2address
+    amount: u64,
+    real_token: [u8; 20],
+}
+/*
+    event RevertBurnRequest(bytes32 indexed _id, address indexed _to);
+*/
+/*
+    event BurnCompleted(bytes32 indexed _id, address indexed _to, uint _amount, address _token);
+*/
+/*
+    event RevertSynthesizeCompleted(bytes32 indexed _id, address indexed _to, uint _amount, address _token);
+*/
+
+#[event]
+pub struct EvRevertSynthesizeCompleted {
+    id: [u8; 32],
+    to: Pubkey,
+    amount: u64,
+    pub token: [u8; 20],
 }
 
 // #endregion Portal
@@ -523,10 +1026,22 @@ pub struct EvSynthesizeRequest {
 // #endregion Events
 // #region DataAccounts
 
+/*
 #[account]
 pub struct Mint {
     pub supply: u32,
 }
+*/
+
+/* bridge => nonce */
+#[account]
+#[derive(Default)]
+pub struct BridgeNonce {
+    nonce: u64,
+}
+
+// mapping(address => uint) public nonce;
+// mapping(address => bool) public dexBind;
 
 #[account]
 pub struct MintData {
@@ -559,6 +1074,7 @@ pub struct MintData {
 //     }
 // }
 
+/*
 #[associated]
 #[derive(Default)]
 pub struct Token {
@@ -571,6 +1087,36 @@ pub struct Token {
 pub struct DataAccount {
     pub owner: Pubkey,
     pub data: u64,
+}
+*/
+
+#[derive(
+    AnchorSerialize,
+    AnchorDeserialize,
+    Clone,
+    PartialEq,
+)]
+pub enum RequestState {
+    Default,
+    Sent,
+    Reverted,
+}
+
+#[account]
+#[derive(Default)]
+pub struct SynthesizeRequestInfo {
+    tx_id: [u8; 32],
+    recipient: Pubkey,
+    chain_to_address: [u8; 20],
+    real_token: [u8; 20],
+    amount: u64,
+    state: RequestState,
+}
+
+impl Default for RequestState {
+    fn default() -> Self {
+        RequestState::Default
+    }
 }
 
 // #endregion DataAccounts
@@ -595,6 +1141,7 @@ pub struct PortalInit<'info> {
 // #endregion for methods
 // #region for functions
 
+/*
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     #[account(init)]
@@ -632,11 +1179,38 @@ pub struct CreateToken<'info> {
 // #region Synthesis
 
 #[derive(Accounts)]
+#[instruction(
+    bump_seed_data: u8,
+    bump_seed_mint: u8,
+    token_real: [u8; 20],
+)]
 pub struct CreateRepresentation<'info> {
-    #[account(mut)]
+    #[account(
+        init,
+        seeds = [
+            b"mint".as_ref(),
+            &token_real,
+            &[bump_seed_mint],
+        ],
+        payer = owner,
+        space = 82,
+        owner = SPL_TOKEN_PID,
+    )]
     mint: AccountInfo<'info>,
-    #[account(init)]
+    #[account(
+        init,
+        seeds = [
+            b"mint-data".as_ref(),
+            &token_real,
+            &[bump_seed_data],
+        ],
+        payer = owner,
+        space = 222,
+        owner = program_id,
+    )]
     mint_data: ProgramAccount<'info, MintData>,
+    token_program: AccountInfo<'info>,
+    system_program: AccountInfo<'info>,
     rent: Sysvar<'info, Rent>,
     // #[account(mut, has_one = owner)]
     // pub data: ProgramAccount<'info, DataAccount>,
@@ -644,12 +1218,38 @@ pub struct CreateRepresentation<'info> {
     pub owner: AccountInfo<'info>,
 }
 
+/*
+#[derive(Accounts)]
+#[instruction(nonce: u8)]
+pub struct CreateSplAssociatedAccount<'info> {
+    #[account(
+        init,
+        token = mint,
+        authority = owner,
+        seeds = [b"my-token-seed".as_ref(), &[nonce]],
+        payer = owner,
+        space = TokenAccount::LEN,
+    )]
+    account: CpiAccount<'info, TokenAccount>,
+    token_program: AccountInfo<'info>,
+    system_program: AccountInfo<'info>,
+    mint: CpiAccount<'info, Mint>,
+    #[account(signer, mut)]
+    pub owner: AccountInfo<'info>,
+    rent: Sysvar<'info, Rent>,
+}
+*/
+
 #[derive(Accounts)]
 pub struct MintSyntheticToken<'info> {
     #[account(mut)]
     mint: AccountInfo<'info>,
     #[account(mut)]
+    to: AccountInfo<'info>,
+    #[account(mut)]
     mint_data: ProgramAccount<'info, MintData>,
+    this_program: AccountInfo<'info>,
+    token_program: AccountInfo<'info>,
     #[account(signer)]
     pub owner: AccountInfo<'info>,
 }
@@ -734,6 +1334,15 @@ pub struct Unsynthesize<'info> {
     bridge: AccountInfo<'info>,
 }
 
+/*
+    #[account(signer)]
+    owner_account: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct EmergencyUnsynthesize<'info> {
+*/
+
 #[derive(Accounts)]
 pub struct EmergencyUnburnRequest<'info> {
     #[account(mut)]
@@ -752,17 +1361,25 @@ pub struct EmergencyUnburnRequest<'info> {
 }
 
 // #endregion Portal
+// #region Bridge
 
 #[error]
 pub enum ErrorCode {
-    #[msg("Unauthorized")]
-    Unauthorized = 1000,
-    #[msg("UNTRUSTED DEX")]
-    UntrustedDex,
     #[msg("This is an error message clients will automatically display 1234")]
     Test = 1234,
+    #[msg("Unauthorized")]
+    Unauthorized = 2000,
+    #[msg("UNTRUSTED DEX")]
+    UntrustedDex,
+    #[msg("index out of bounds")]
+    IndexOutOfBounds,
+    #[msg("value out of bounds")]
+    ValueOutOfBounds,
+    #[msg("invalid value")]
+    InvalidValue,
 }
 
+/*
 #[account]
 #[derive(Default)]
 pub struct BridgeNonce {
@@ -779,6 +1396,7 @@ pub struct SynthesizeRequestInfo {
     amount: u64,
     state: RequestState,
 }
+*/
 
 #[account]
 #[derive(Default, Debug)]
@@ -808,6 +1426,7 @@ pub struct SynthesizeRequest {
     real_token: [u8; 20],
 }
 
+/*
 #[event]
 pub struct OracleRequest {
     request_type: String,
@@ -817,6 +1436,40 @@ pub struct OracleRequest {
     receive_side: [u8; 20],
     opposite_bridge: [u8; 20],
     chain_id: u64,
+}
+*/
+
+#[derive(
+    AnchorSerialize,
+    AnchorDeserialize,
+    Clone,
+    PartialEq,
+)]
+pub struct TransactionAccount {
+    pubkey: Pubkey,
+    is_signer: bool,
+    is_writable: bool,
+}
+
+impl From<TransactionAccount> for AccountMeta {
+    fn from(account: TransactionAccount) -> AccountMeta {
+        match account.is_writable {
+            false => AccountMeta::new_readonly(account.pubkey, account.is_signer),
+            true => AccountMeta::new(account.pubkey, account.is_signer),
+        }
+    }
+}
+
+#[derive(
+    AnchorSerialize,
+    AnchorDeserialize,
+    Clone,
+    PartialEq,
+)]
+pub struct StandaloneInstruction {
+    accounts: Vec<TransactionAccount>,
+    program_id: Pubkey,
+    data: Vec<u8>,
 }
 
 #[event]
@@ -841,6 +1494,7 @@ pub struct RevertBurnRequest {
     to: Pubkey,
 }
 
+/*
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq)]
 pub enum RequestState {
     Default,
@@ -853,3 +1507,12 @@ impl Default for RequestState {
         RequestState::Default
     }
 }
+*/
+
+#[derive(Accounts)]
+pub struct ReceiveRequest<'info> {
+    #[account(signer)]
+    proposer: AccountInfo<'info>,
+}
+
+// #endregion Bridge

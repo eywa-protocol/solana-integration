@@ -1,8 +1,6 @@
 import assert from 'assert';
 import { expect } from 'chai';
 
-import * as BufferLayout from 'buffer-layout';
-
 import { TOKEN_PROGRAM_ID, Token } from '@solana/spl-token';
 import * as anchor from '@project-serum/anchor';
 import {
@@ -13,6 +11,11 @@ import {
   workspace,
 } from '@project-serum/anchor';
 import { Keypair, PublicKey } from '@solana/web3.js';
+
+import { AsyncParam } from './utils/async-param';
+
+import { SyntesiseTests } from './syntesise';
+import { BridgeTests } from './bridge';
 
 
 const sleep = async (sec: number) =>
@@ -26,8 +29,11 @@ describe('eywa-bridge-solana', () => {
   let accAdmin: web3.Keypair;
   let accData: web3.Keypair;
 
+  const admin = new AsyncParam();
+
   before(async () => {
     accAdmin = web3.Keypair.generate();
+    await sleep(1);
     const program = workspace.EywaBridgeSolana;
   });
 
@@ -36,11 +42,13 @@ describe('eywa-bridge-solana', () => {
       fromPubkey: provider.wallet.publicKey,
       toPubkey: accAdmin.publicKey,
       // @ts-ignore
-      lamports: new BN('100000000000000000'),
+      lamports: new BN('10000000000000000'),
     };
     const tx = new web3.Transaction();
     tx.add(web3.SystemProgram.transfer(params));
     await provider.send(tx);
+
+    admin.resolve(accAdmin);
   });
 
   it.skip('Is initialized!!!', async () => {
@@ -122,9 +130,9 @@ describe('eywa-bridge-solana', () => {
 
     const state = await program.state.fetch();
     const owner = state.owner.toBase58();
-    const param = state.param.toString();
+    // const param = state.param.toString();
 
-    expect(param).eq('100');
+    // expect(param).eq('100');
     expect(owner).eq(accAdmin.publicKey.toBase58());
   });
 
@@ -180,14 +188,15 @@ describe('eywa-bridge-solana', () => {
     const accAdmin = acc1
     const accMintSynt = acc2
     const accMintSyntData = acc3
-    const pidTokenProgram = TOKEN_PROGRAM_ID
-    const pidThisProgram = new PublicKey('ThisProgram11111111111111111111111111111111')
-    console.log('pidTokenProgram', pidTokenProgram.toBuffer().toString('hex'));
-    console.log('pidThisProgram', pidThisProgram.toBuffer().toString('hex'));
-    console.log('pidSystemProgram', web3.SystemProgram.programId.toBuffer().toString('hex'));
-    console.log('pidSysvarRent', web3.SYSVAR_RENT_PUBKEY.toBuffer().toString('hex'));
-    console.log('pidBPFLoader', web3.BPF_LOADER_PROGRAM_ID.toBuffer().toString('hex'));
+    // const pidTokenProgram = TOKEN_PROGRAM_ID
+    // const pidThisProgram = new PublicKey('ThisProgram11111111111111111111111111111111')
+    // console.log('pidTokenProgram', pidTokenProgram.toBuffer().toString('hex'));
+    // console.log('pidThisProgram', pidThisProgram.toBuffer().toString('hex'));
+    // console.log('pidSystemProgram', web3.SystemProgram.programId.toBuffer().toString('hex'));
+    // console.log('pidSysvarRent', web3.SYSVAR_RENT_PUBKEY.toBuffer().toString('hex'));
+    // console.log('pidBPFLoader', web3.BPF_LOADER_PROGRAM_ID.toBuffer().toString('hex'));
 
+    /*
     const ixCreateSyntAccount = web3.SystemProgram.createAccount({
       fromPubkey: accAdmin.publicKey,
       newAccountPubkey: accMintSynt.publicKey,
@@ -211,11 +220,14 @@ describe('eywa-bridge-solana', () => {
       accAdmin.publicKey,
       accAdmin.publicKey,
     );
+    */
 
     const ixCreateRepresentation = await program.instruction.createRepresentation(
+      12,
+      21,
       // token_real: [u8; 20] // 0x1234567890123456789012345678901234567890
       new BN(/* 0x */"1234567890123456789012345678901234567890", 16).toArray(),
-      accMintSynt.publicKey,
+      // accMintSynt.publicKey,
       'Some Synt Name', // synt name
       'SSN', // synt short name
       2, // decimals
@@ -223,158 +235,27 @@ describe('eywa-bridge-solana', () => {
       accounts: {
         mint: accMintSynt.publicKey,
         mintData: accMintSyntData.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         owner: accAdmin.publicKey,
       },
     });
 
     const transaction = new web3.Transaction();
-    transaction.add(ixCreateSyntAccount);
-    transaction.add(ixCreateMintDataAccount);
-    transaction.add(ixInitializeMintAccount);
     transaction.add(ixCreateRepresentation);
     transaction.recentBlockhash = recentBlockhash;
     transaction.sign(
       accAdmin,
-      accMintSynt,
-      accMintSyntData,
+      // accMintSynt,
+      // accMintSyntData,
     );
     const bufTx = transaction.serialize();
     console.log('signed transaction');
     console.log(bufTx.toString('hex'));
   })
 
-  it("Create representation", async () => {
-    const program = workspace.EywaBridgeSolana;
-    const mintSynt = anchor.web3.Keypair.generate();
-    const mintSyntData = anchor.web3.Keypair.generate();
-
-    console.log('accAdmin', accAdmin.publicKey.toBase58());
-    console.log('accAdmin', accAdmin.publicKey.toBuffer().toString('hex'));
-    console.log('mintSynt', mintSynt.publicKey.toBase58());
-    console.log('mintSynt', mintSynt.publicKey.toBuffer().toString('hex'));
-    console.log('mintSyntData', mintSyntData.publicKey.toBase58());
-    console.log('mintSyntData', mintSyntData.publicKey.toBuffer().toString('hex'));
-
-    function sendAndConfirmTransaction(
-      title: string,
-      connection: web3.Connection,
-      transaction: web3.Transaction,
-      ...signers: Array<web3.Signer>
-    ): Promise<web3.TransactionSignature> {
-      console.log(title);
-      return web3.sendAndConfirmTransaction(connection, transaction, signers, {
-        skipPreflight: false,
-      });
-    }
-
-    const Layout = {
-    /**
-     * Layout for a public key
-     */
-    // export const
-    publicKey/* = */(property: string = 'publicKey'): Object /* => */ {
-      return BufferLayout.blob(32, property);
-    }, //;
-
-    /**
-     * Layout for a 64bit unsigned value
-     */
-    // export const
-    uint64/* = */(property: string = 'uint64'): Object /* => */ {
-      return BufferLayout.blob(8, property);
-    }, //;
-    };
-
-    const MintLayout: typeof BufferLayout.Structure = BufferLayout.struct([
-      BufferLayout.u32('mintAuthorityOption'),
-      Layout.publicKey('mintAuthority'),
-      Layout.uint64('supply'),
-      BufferLayout.u8('decimals'),
-      BufferLayout.u8('isInitialized'),
-      BufferLayout.u32('freezeAuthorityOption'),
-      Layout.publicKey('freezeAuthority'),
-    ]);
-
-    const balanceNeeded = await Token.getMinBalanceRentForExemptMint(
-      provider.connection,
-    );
-
-    // const lamports = await provider.connection.getMinimumBalanceForRentExemption(space);
-    console.log('balanceNeeded:', balanceNeeded)
-
-    const ixCreateMint = web3.SystemProgram.createAccount({
-      fromPubkey: accAdmin.publicKey,
-      newAccountPubkey: mintSynt.publicKey,
-      lamports: balanceNeeded,
-      space: MintLayout.span,
-      programId: TOKEN_PROGRAM_ID,
-    })
-
-    const space = 1000; // 8 + 32 + 8;
-    const lamports = await provider.connection.getMinimumBalanceForRentExemption(space);
-    console.log('lamports:', lamports)
-    const ixCreateMintData = web3.SystemProgram.createAccount({
-      fromPubkey: accAdmin.publicKey,
-      newAccountPubkey: mintSyntData.publicKey,
-      space,
-      lamports,
-      programId: program.programId,
-    });
-
-    const ixInitMint = Token.createInitMintInstruction(
-      TOKEN_PROGRAM_ID,
-      mintSynt.publicKey,
-      2,
-      accAdmin.publicKey,
-      accAdmin.publicKey,
-    );
-
-    const ixCreateRepresentation = await program.instruction.createRepresentation(
-      // real token for synt // 0x1234567890123456789012345678901234567890
-      new BN(/* 0x */"1234567890123456789012345678901234567890", 16).toArray(),
-      mintSynt.publicKey,
-      'Some Synt Name', // synt name
-      'SSN', // synt short name
-      2, // decimals
-    {
-      accounts: {
-        mint: mintSynt.publicKey,
-        mintData: mintSyntData.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        owner: accAdmin.publicKey,
-      },
-    });
-
-
-    const transaction = new web3.Transaction();
-    transaction.add(ixCreateMint);
-    transaction.add(ixCreateMintData);
-    transaction.add(ixInitMint);
-    transaction.add(ixCreateRepresentation);
-
-    // Send the two instructions
-    await sendAndConfirmTransaction(
-      'createAccount and InitializeMint',
-      provider.connection,
-      transaction,
-      accAdmin,
-      mintSynt,
-      mintSyntData,
-    );
-
-    const token = new Token(
-      provider.connection,
-      mintSynt.publicKey,
-      TOKEN_PROGRAM_ID,
-      accAdmin,
-    );
-    const mintInfo = await token.getMintInfo();
-    console.log('mintInfo:', mintInfo);
-
-  });
-
-  it("Increments program settings.param", async () => {
+  it.skip("Increments program settings.param", async () => {
     const program = workspace.EywaBridgeSolana;
 
     await program.state.rpc.increment({
@@ -459,5 +340,15 @@ describe('eywa-bridge-solana', () => {
     assert.ok(slot > 0);
     assert.ok(event.data.toNumber() === 777);
     assert.ok(event.label === "hello");
+  });
+
+  SyntesiseTests({
+    provider,
+    admin,
+  });
+
+  BridgeTests({
+    provider,
+    admin,
   });
 });

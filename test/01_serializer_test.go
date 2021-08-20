@@ -6,6 +6,7 @@ import (
 	"log"
 	"testing"
 
+	"example.com/serializer"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/sysprog"
 	"github.com/portto/solana-go-sdk/tokenprog"
@@ -27,11 +28,11 @@ func compareBytes(a []byte, b []byte) error {
 	return nil
 }
 
-type CreateRepresentationData struct {
-	X uint64
-	Y string
-	Z string `borsh_skip:"true"` // will skip this field when serializing/deserializing
-}
+// type CreateRepresentationData struct {
+// 	X uint64
+// 	Y string
+// 	Z string `borsh_skip:"true"` // will skip this field when serializing/deserializing
+// }
 
 func CreateRepresentation(
 	pidThisProgram common.PublicKey,
@@ -288,4 +289,115 @@ func Test_serializer(t *testing.T) {
 	require.NoError(t, compareBytes([]byte{1}, []byte{2}))
 
 	// ix.
+}
+
+func Test_Receive_request_serializer(t *testing.T) {
+	accAdmin := types.AccountFromPrivateKeyBytes([]byte{
+		149, 63, 8, 13, 195, 113, 123, 153, 126, 15, 4, 101, 143, 60, 220, 156,
+		29, 214, 199, 157, 191, 177, 203, 175, 46, 149, 166, 158, 102, 83, 216, 44,
+		248, 25, 187, 98, 43, 69, 174, 113, 217, 102, 82, 6, 216, 36, 167, 12,
+		17, 72, 239, 18, 53, 151, 205, 223, 163, 161, 179, 168, 209, 227, 62, 136,
+	})
+	pidThisProgram := common.PublicKeyFromString("ThisProgram11111111111111111111111111111111")
+	fmt.Println("program account:", pidThisProgram.ToBase58())
+	fmt.Printf("program account: %x\n", pidThisProgram.Bytes())
+
+	personName := "World"
+	pubAdmin := accAdmin.PublicKey
+	ixHello := serializer.CreateHelloInstruction(personName, pidThisProgram, pubAdmin)
+	sInst := serializer.CreateStandaloneInstruction(ixHello)
+	sInstData, err := sInst.Serialize()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("sInstData: %x\n", sInstData)
+	/*
+		06d7253986b0571fb09c9adaf797199954bd81fad9965ab239ced0a200000000 // pidThisProgram
+		f819bb622b45ae71d9665206d824a70c1148ef123597cddfa3a1b3a8d1e33e88 // pubAdmin
+		95763bdcc47fa1b3 // InstructionHello
+		05000000 // len(""World"")
+		576f726c64 // "World"
+	*/
+	InstructionReceiveRequest := [8]uint8{
+		92, 46, 108, 42, 179, 64, 8, 139,
+	}
+	fmt.Printf("InstructionReceiveRequest: %x\n", InstructionReceiveRequest)
+
+	dataReceiveRequest, err := common.SerializeData(struct {
+		Instruction [8]uint8
+		ReqId       [32]uint8
+		SInst       []byte
+		BridgeFrom  [20]uint8
+	}{
+		Instruction: InstructionReceiveRequest,
+		ReqId: [32]uint8{
+			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+			21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+		},
+		SInst: sInstData,
+		BridgeFrom: [20]uint8{
+			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("dataReceiveRequest: %x\n", dataReceiveRequest)
+
+	ixReceiveRequest := types.Instruction{
+		ProgramID: pidThisProgram,
+		Accounts: []types.AccountMeta{
+			// person: provider.wallet.publicKey,
+			{PubKey: pubAdmin, IsSigner: true, IsWritable: false},
+			{PubKey: pidThisProgram, IsWritable: false, IsSigner: false},
+			{PubKey: pubAdmin, IsWritable: false, IsSigner: false},
+		},
+		Data: dataReceiveRequest,
+	}
+
+	RecentBlockHash := "FU6qerSujsjVNhY1z88pwdqEdyT594fD4wLyBGnTGvaG"
+	fmt.Println("RecentBlockHash:", RecentBlockHash)
+	fmt.Printf("RecentBlockHash: %x\n", RecentBlockHash)
+
+	rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
+		Instructions: []types.Instruction{
+			ixReceiveRequest,
+		},
+		Signers: []types.Account{
+			accAdmin,
+		},
+		FeePayer:        accAdmin.PublicKey,
+		RecentBlockHash: RecentBlockHash,
+	})
+	if err != nil {
+		log.Fatalf("generate tx error, err: %v\n", err)
+	}
+
+	fmt.Printf("rawTx: %x\n", rawTx)
+	/*
+		01
+		328a72d36109f193acc12ed54795450168b915807617a332dc9030a2d5ea957a
+		354f253943fa633feec27adb0ae49a292d7c8b91fa4b4c81075b722c625b0c00
+		01
+		00
+		01
+		02
+		f819bb622b45ae71d9665206d824a70c1148ef123597cddfa3a1b3a8d1e33e88
+		06d7253986b0571fb09c9adaf797199954bd81fad9965ab239ced0a200000000
+		d6f4e69b75da0e0d1f0e6ca2c07fe4c2f78c114fd7ab1e3a0232898bc5a7e5d5
+		01
+		01
+		03
+		00
+		01
+		00
+		8d015c2e6c2ab340088b
+		0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20
+		06d7253986b0571fb09c9adaf797199954bd81fad9965ab239ced0a200000000
+		f819bb622b45ae71d9665206d824a70c1148ef123597cddfa3a1b3a8d1e33e88
+		95763bdcc47fa1b3
+		05000000
+		576f726c64
+		0102030405060708090a0b0c0d0e0f1011121314
+	*/
 }
