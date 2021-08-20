@@ -32,6 +32,7 @@ pub mod eywa_bridge_solana {
         // address public _listNode;
         // uint256 public requestCount = 1;
         pub portal_request_count: u64,
+        pub bridge: Pubkey,
     }
     impl Settings {
         pub fn new(ctx: Context<Auth>) -> Result<Self> {
@@ -39,6 +40,7 @@ pub mod eywa_bridge_solana {
                 owner: *ctx.accounts.owner.key,
                 param: 100,
                 portal_request_count: 0,
+                bridge: ctx.accounts.bridge.key(),
             })
         }
 
@@ -49,9 +51,25 @@ pub mod eywa_bridge_solana {
             self.param += 1;
             Ok(())
         }
+    /*
+    }
 
         // #region Portal
 
+    #[state]
+    pub struct Portal {
+        pub request_count: u64,
+        pub bridge: Pubkey,
+    }
+
+    impl Portal {
+        pub fn new(_ctx: Context<PortalInit>) -> Result<Self> {
+            Ok(Self {
+                request_count: 0,
+                bridge: _ctx.accounts.bridge.key(),
+            })
+        }
+    */
         pub fn synthesize(
             &mut self,
             ctx: Context<Synthesize>,
@@ -146,9 +164,13 @@ pub mod eywa_bridge_solana {
 
         pub fn emergency_unsynthesize(
             &self,
-            ctx: Context<Unsynthesize>,
+            ctx: Context<EmergencyUnsynthesize>,
             tx_id: [u8; 32],
         ) -> ProgramResult {
+            if *ctx.accounts.bridge.key != self.bridge {
+                msg!("Portal: required bridge signature");
+                return ProgramResult::Err(ProgramError::InvalidAccountData);
+            }
             if *ctx.accounts.destination_account.key != ctx.accounts.synthesize_request.recipient {
                 msg!("Portal: destination account doesn't match with recipient");
                 msg!("{} {}", *ctx.accounts.destination_account.key, ctx.accounts.synthesize_request.recipient);
@@ -185,8 +207,8 @@ pub mod eywa_bridge_solana {
 
             Ok(())
         }
-    }
     // #endregion Portal
+    /*
     pub fn initialize(ctx: Context<Initialize>, admin: Pubkey, data: u64) -> ProgramResult {
         let acc_data = &mut ctx.accounts.data;
 
@@ -217,7 +239,132 @@ pub mod eywa_bridge_solana {
         ctx.accounts.mint.supply = 0;
         Ok(())
     }
+    */
+        pub fn unsynthesize(
+            &self,
+            ctx: Context<Unsynthesize>,
+            token: Pubkey,
+            tx_id: String,
+            amount: u64,
+        ) -> ProgramResult {
+            if *ctx.accounts.bridge.key != self.bridge {
+                msg!("Portal: required bridge signature");
+                return ProgramResult::Err(ProgramError::InvalidAccountData);
+            }
+            let mut unsynthesize_state: UnsynthesizeStatesInfo = get_or_create_account_data(
+                &ctx.accounts.unsynthesize_state,
+                &ctx.accounts.states_master_account,
+                &ctx.accounts.system_program,
+                &ctx.accounts.rent,
+                1,
+                tx_id.as_str(),
+                &[],
+                ctx.program_id,
+            )?;
 
+            if unsynthesize_state.state != UnsynthesizeStates::Default {
+                msg!("Portal: syntatic tokens emergencyUnburn");
+                return ProgramResult::Err(ProgramError::InvalidArgument);
+            }
+
+            let cpi_accounts = Transfer {
+                from: ctx.accounts.source_account.clone(),
+                to: ctx.accounts.destination_account.clone(),
+                authority: ctx.accounts.owner_account.clone(),
+            };
+            let cpi_program = ctx.accounts.spl_token_account.clone();
+            let cpi_ctx = CpiContext::new(cpi_program.clone(), cpi_accounts);
+            token::transfer(cpi_ctx, amount)?;
+
+            unsynthesize_state.state = UnsynthesizeStates::Unsynthesized;
+            unsynthesize_state
+                .serialize(&mut *ctx.accounts.unsynthesize_state.try_borrow_mut_data()?)?;
+
+            let event = BurnCompleted {
+                id: tx_id,
+                to: *ctx.accounts.destination_account.key,
+                amount,
+                token,
+            };
+            emit!(event);
+
+            Ok(())
+        }
+
+        pub fn emergency_unburn_request(
+            &self,
+            ctx: Context<EmergencyUnburnRequest>,
+            tx_id: String,
+            receive_side: [u8; 20],
+            opposite_bridge: [u8; 20],
+            chain_id: u64,
+        ) -> ProgramResult {
+            let key = Pubkey::create_with_seed(
+                &ctx.accounts.states_master_account.key,
+                tx_id.as_str(),
+                &ctx.program_id,
+            )?;
+            if key != *ctx.accounts.unsynthesize_state.key {
+                msg!("Portal: got unsynthesize_state account with another tx_id");
+                return ProgramResult::Err(ProgramError::InvalidAccountData);
+            }
+            let mut unsynthesize_states_info = UnsynthesizeStatesInfo::try_from_slice(
+                *ctx.accounts.unsynthesize_state.data.borrow(),
+            )?;
+            if unsynthesize_states_info.state != UnsynthesizeStates::Unsynthesized {
+                msg!("Portal: Real tokens already transfered");
+                return ProgramResult::Err(ProgramError::InvalidAccountData);
+            }
+            unsynthesize_states_info.state = UnsynthesizeStates::RevertRequest;
+            unsynthesize_states_info
+                .serialize(&mut *ctx.accounts.unsynthesize_state.try_borrow_mut_data()?)?;
+
+            let mut hasher = keccak::Hasher::default();
+            hasher.hash(b"emergencyUnburn(bytes32)");
+            let title = hasher.result().0;
+
+            let mut hasher = keccak::Hasher::default();
+            hasher.hash(
+                <([u8; 32], &str) as borsh::BorshSerialize>::try_to_vec(&(title, tx_id.as_str()))
+                    .map_err(|_| ProgramError::InvalidArgument)?
+                    .as_slice(),
+            );
+
+            let out = hasher.result().0;
+
+            let mut bridge_nonce: BridgeNonce = get_or_create_account_data(
+                &ctx.accounts.bridge_nonce,
+                &ctx.accounts.nonce_master_account,
+                &ctx.accounts.system_program,
+                &ctx.accounts.rent,
+                8,
+                //TODO: Take seed from params
+                "0,1,2,3,4,5,6,7,8",
+                &[],
+                ctx.program_id,
+            )?;
+
+            transmit_request(
+                &out,
+                receive_side,
+                opposite_bridge,
+                chain_id,
+                &mut bridge_nonce.nonce,
+                ctx.program_id,
+            );
+
+            let event = RevertBurnRequest {
+                id: tx_id,
+                to: *ctx.accounts.message_sender.key,
+            };
+            emit!(event);
+
+            Ok(())
+        }
+    }
+    // #endregion Portal
+
+    /*
     pub fn create_token(ctx: Context<CreateToken>) -> ProgramResult {
         let token = &mut ctx.accounts.token;
         token.amount = 0;
@@ -226,6 +373,7 @@ pub mod eywa_bridge_solana {
 
         Ok(())
     }
+    */
 
     // #region Syntesise
 
@@ -250,7 +398,6 @@ pub mod eywa_bridge_solana {
     }
 
     // #endregion Syntesise
-
 }
 
 pub fn transmit_request(
@@ -433,10 +580,17 @@ pub struct DataAccount {
 pub struct Auth<'info> {
     #[account(signer)]
     owner: AccountInfo<'info>,
+    // #[account(signer)]
+    bridge: AccountInfo<'info>,
 }
 
+/*
 #[derive(Accounts)]
-pub struct PortalInit {}
+pub struct PortalInit<'info> {
+    #[account(signer)]
+    bridge: AccountInfo<'info>,
+}
+*/
 
 // #endregion for methods
 // #region for functions
@@ -530,7 +684,7 @@ pub struct EmergencyUnburn<'info> {
 #[derive(Accounts)]
 pub struct Synthesize<'info> {
     #[account(init)]
-    pub synthesize_request: ProgramAccount<'info, SynthesizeRequestInfo>,
+    synthesize_request: ProgramAccount<'info, SynthesizeRequestInfo>,
     #[account(mut)]
     source_account: AccountInfo<'info>,
     #[account(mut)]
@@ -538,18 +692,18 @@ pub struct Synthesize<'info> {
     #[account(signer, mut)]
     owner_account: AccountInfo<'info>,
     spl_token_account: AccountInfo<'info>,
-    pub rent: Sysvar<'info, Rent>,
     #[account(signer, mut)]
     nonce_master_account: AccountInfo<'info>,
     #[account(mut)]
     bridge_nonce: AccountInfo<'info>,
     system_program: AccountInfo<'info>,
+    rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
-pub struct Unsynthesize<'info> {
+pub struct EmergencyUnsynthesize<'info> {
     #[account(mut)]
-    pub synthesize_request: ProgramAccount<'info, SynthesizeRequestInfo>,
+    synthesize_request: ProgramAccount<'info, SynthesizeRequestInfo>,
     #[account(mut)]
     source_account: AccountInfo<'info>,
     #[account(mut)]
@@ -557,6 +711,44 @@ pub struct Unsynthesize<'info> {
     #[account(signer, mut)]
     owner_account: AccountInfo<'info>,
     spl_token_account: AccountInfo<'info>,
+    #[account(signer)]
+    bridge: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct Unsynthesize<'info> {
+    #[account(mut)]
+    unsynthesize_state: AccountInfo<'info>,
+    #[account(mut, signer)]
+    states_master_account: AccountInfo<'info>,
+    #[account(mut)]
+    source_account: AccountInfo<'info>,
+    #[account(mut)]
+    destination_account: AccountInfo<'info>,
+    #[account(signer, mut)]
+    owner_account: AccountInfo<'info>,
+    spl_token_account: AccountInfo<'info>,
+    system_program: AccountInfo<'info>,
+    rent: Sysvar<'info, Rent>,
+    #[account(signer)]
+    bridge: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct EmergencyUnburnRequest<'info> {
+    #[account(mut)]
+    unsynthesize_state: AccountInfo<'info>,
+    //unsynthesize_state: ProgramAccount<'info, UnsynthesizeStatesInfo>,
+    #[account(mut, signer)]
+    states_master_account: AccountInfo<'info>,
+    #[account(signer, mut)]
+    nonce_master_account: AccountInfo<'info>,
+    #[account(mut)]
+    bridge_nonce: AccountInfo<'info>,
+    #[account(signer)]
+    message_sender: AccountInfo<'info>,
+    system_program: AccountInfo<'info>,
+    rent: Sysvar<'info, Rent>,
 }
 
 // #endregion Portal
@@ -570,14 +762,6 @@ pub enum ErrorCode {
     #[msg("This is an error message clients will automatically display 1234")]
     Test = 1234,
 }
-
-/*
-#[account]
-#[derive(Default)]
-pub struct SynthesizeInfo {
-    request_count: u64,
-}
-*/
 
 #[account]
 #[derive(Default)]
@@ -594,6 +778,25 @@ pub struct SynthesizeRequestInfo {
     real_token: [u8; 20],
     amount: u64,
     state: RequestState,
+}
+
+#[account]
+#[derive(Default, Debug)]
+pub struct UnsynthesizeStatesInfo {
+    state: UnsynthesizeStates,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Debug)]
+pub enum UnsynthesizeStates {
+    Default,
+    Unsynthesized,
+    RevertRequest,
+}
+
+impl Default for UnsynthesizeStates {
+    fn default() -> Self {
+        UnsynthesizeStates::Default
+    }
 }
 
 #[event]
@@ -621,7 +824,21 @@ pub struct RevertSynthesizeCompleted {
     id: [u8; 32],
     to: Pubkey,
     amount: u64,
-    pub token: [u8; 20],
+    token: [u8; 20],
+}
+
+#[event]
+pub struct BurnCompleted {
+    id: String,
+    to: Pubkey,
+    amount: u64,
+    token: Pubkey,
+}
+
+#[event]
+pub struct RevertBurnRequest {
+    id: String,
+    to: Pubkey,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq)]

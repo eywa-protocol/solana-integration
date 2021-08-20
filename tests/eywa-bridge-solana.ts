@@ -43,7 +43,7 @@ describe('eywa-bridge-solana', () => {
     await provider.send(tx);
   });
 
-  it('Is initialized!!!', async () => {
+  it.skip('Is initialized!!!', async () => {
     const program = workspace.EywaBridgeSolana;
     accData = web3.Keypair.generate();
 
@@ -73,7 +73,7 @@ describe('eywa-bridge-solana', () => {
     assert.ok(account.data.eq(new BN(1234)));
   });
 
-  it("Updates a previously created account", async () => {
+  it.skip("Updates a previously created account", async () => {
     const program = workspace.EywaBridgeSolana;
 
     await program.rpc.update(new BN(4321), {
@@ -89,7 +89,7 @@ describe('eywa-bridge-solana', () => {
     assert.ok(account.data.eq(new BN(4321)));
   });
 
-  it("Error on updates with 1234", async () => {
+  it.skip("Error on updates with 1234", async () => {
     const program = workspace.EywaBridgeSolana;
 
     try {
@@ -115,6 +115,7 @@ describe('eywa-bridge-solana', () => {
     await program.state.rpc.new({
       accounts: {
         owner: accAdmin.publicKey,
+        bridge: program.programId,
       },
       signers: [accAdmin]
     });
@@ -379,6 +380,7 @@ describe('eywa-bridge-solana', () => {
     await program.state.rpc.increment({
       accounts: {
         owner: accAdmin.publicKey,
+        bridge: program.programId,
       },
       signers: [accAdmin]
     });
@@ -393,7 +395,7 @@ describe('eywa-bridge-solana', () => {
 
   const mint = anchor.web3.Keypair.generate();
 
-  it("Sets up the test", async () => {
+  it.skip("Sets up the test", async () => {
     const program = workspace.EywaBridgeSolana;
 
     await program.rpc.createMint({
@@ -406,7 +408,7 @@ describe('eywa-bridge-solana', () => {
     });
   });
 
-  it("Creates an associated token account", async () => {
+  it.skip("Creates an associated token account", async () => {
     const program = workspace.EywaBridgeSolana;
 
     const authority = program.provider.wallet.publicKey;
@@ -435,7 +437,7 @@ describe('eywa-bridge-solana', () => {
     assert.ok(account.mint.equals(mint.publicKey));
   });
 
-  it("Listen event on update", async () => {
+  it.skip("Listen event on update", async () => {
     const program = workspace.EywaBridgeSolana;
 
     let listener = null;
