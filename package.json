@@ -3,7 +3,12 @@
   "version": "0.0.1",
   "scripts": {
     "build": "anchor build",
+    "test:rs:bridge": "cargo test-bpf --manifest-path programs/bridge/Cargo.toml",
+    "test:rs:stub": "cargo test-bpf --manifest-path programs/test-stub/Cargo.toml",
+    "test:rs": "cargo test-bpf",
+    "test:internal1": "ts-mocha -p ./tsconfig.json -t 1000000 tests/*.ts",
     "test:internal": "ts-mocha -p ./tsconfig.json -t 1000000 tests/eywa-portal-solana.ts",
+    "test:internal3": "ts-mocha -p ./tsconfig.json -t 1000000 tests/eywa-bridge-solana.ts",
     "test": "anchor test"
   },
   "dependencies": {

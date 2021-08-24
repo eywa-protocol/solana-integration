@@ -43,7 +43,7 @@ export const ReceiveRequestTests = ({
     logPublicKey('accAdmin', accAdmin.publicKey);
   });
 
-  it("Hello World", async () => {
+  it.skip("Hello World", async () => {
     const program = workspace.EywaBridgeSolana;
 
     const ixHello = await program.instruction.hello('World', {

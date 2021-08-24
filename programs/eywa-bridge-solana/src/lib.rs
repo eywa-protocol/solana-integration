@@ -3,7 +3,8 @@ use anchor_lang::{
     prelude::*,
     prelude::borsh::BorshDeserialize,
     solana_program::{
-        instruction::Instruction,
+        // declare_id,
+        // instruction::Instruction,
         keccak,
         program_error::ProgramError,
         program::{
@@ -503,96 +504,9 @@ pub mod eywa_bridge_solana {
         }
 
         // #endregion Portal
-        // #region Bridge
 
-    /*
-    pub fn create_token(ctx: Context<CreateToken>) -> ProgramResult {
-        let token = &mut ctx.accounts.token;
-        token.amount = 0;
-        token.authority = *ctx.accounts.authority.key;
-        token.mint = *ctx.accounts.mint.to_account_info().key;
-
-        Ok(())
-    }
-    */
-
-        /*
-            function receiveRequestV2(
-                bytes32 reqId,
-                bytes memory b,
-                address receiveSide,
-                address bridgeFrom
-            ) external onlyTrustedNode {
-
-                // TODO check and repair this function
-                // bytes32 recreateReqId = keccak256(abi.encodePacked(bridgeFrom, nonce[bridgeFrom], b, receiveSide, this, block.chainId));
-                // require(reqId == recreateReqId, 'CONSISTENCY FAILED');
-                require(dexBind[receiveSide] == true, 'UNTRUSTED DEX');
-
-                (bool success, bytes memory data) = receiveSide.call(b);
-                require(success && (data.length == 0 || abi.decode(data, (bool))), 'FAILED');
-
-                nonce[bridgeFrom] = nonce[bridgeFrom] + 1;
-
-                emit ReceiveRequest(reqId, receiveSide, reqId);
-            }
-        */
-        pub fn receive_request(
-            &mut self,
-            ctx: Context<ReceiveRequest>,
-            req_id: [u8; 32], // bytes32 reqId,
-            sinst: StandaloneInstruction,
-            // bytes memory b, address receiveSide,
-            bridge_from: [u8; 20], // address bridgeFrom
-        ) -> Result<()> {
-            // use std::convert::*;
-            // TODO: check whether the sender is included in the list of trusted nodes
-            // TODO: check pidTarget
-            msg!("{}", format!("bridge_from: {:?}", bridge_from));
-            msg!("{}", format!("req_id: {:?}", req_id));
-
-            let ix = Instruction {
-                program_id: sinst.program_id,
-                accounts: sinst
-                .accounts
-                .iter()
-                .map(|acc| {
-                    msg!("{}", format!("acc.pubkey: {}", acc.pubkey));
-                    if acc.is_writable {
-                        AccountMeta::new(acc.pubkey, acc.is_signer)
-                    } else {
-                        AccountMeta::new_readonly(acc.pubkey, acc.is_signer)
-                    }
-                })
-                .collect(),
-                data: sinst.data,
-            };
-
-            let seeds = &[
-                b"receive-request-seed".as_ref(),
-            ];
-            let signer = &[&seeds[..]];
-
-            solana_program::program::invoke_signed(
-                &ix,
-                &ctx.remaining_accounts,
-                signer,
-            )?;
-
-            // nonce[bridgeFrom] = nonce[bridgeFrom] + 1;
-
-            emit!(EvReceiveRequest {
-                req_id,
-                receive_side: sinst.program_id,
-                tx_id: req_id, // ???
-            });
-            msg!("EvReceiveRequest {:?}", req_id);
-
-            Ok(())
-        }
     }
 
-    // #endregion Bridge
     // #region Syntesise
 
     // onlyOwner
@@ -774,26 +688,6 @@ pub mod eywa_bridge_solana {
 
     // #endregion Syntesise
 
-    pub fn hello(
-        ctx: Context<Hello>,
-        name: String,
-    ) -> ProgramResult { // onlyOwner
-        let message = format!(
-            "Hello, {}!\n{}",
-            name,
-            ctx.accounts.person.key,
-        );
-        msg!("\n{}", message);
-
-        Ok(())
-    }
-
-}
-
-#[derive(Accounts)]
-pub struct Hello<'info> {
-    // #[account(signer)]
-    person: AccountInfo<'info>,
 }
 
 pub fn transmit_request(
@@ -937,12 +831,14 @@ where
 
 // #region Events
 
+/*
 #[event]
 pub struct MyEvent {
     pub data: u64,
     #[index]
     pub label: String,
 }
+*/
 
 // #region Bridge
 
@@ -966,20 +862,6 @@ pub struct EvOracleRequest {
     receive_side: [u8; 20],
     opposite_bridge: [u8; 20],
     chain_id: u64,
-}
-
-/*
-    event ReceiveRequest(
-        bytes32 reqId,
-        address receiveSide,
-        bytes32 tx
-    );
-*/
-#[event]
-pub struct EvReceiveRequest {
-    req_id: [u8; 32],
-    receive_side: Pubkey,
-    tx_id: [u8; 32],
 }
 
 // #endregion Bridge
@@ -1439,39 +1321,6 @@ pub struct OracleRequest {
 }
 */
 
-#[derive(
-    AnchorSerialize,
-    AnchorDeserialize,
-    Clone,
-    PartialEq,
-)]
-pub struct TransactionAccount {
-    pubkey: Pubkey,
-    is_signer: bool,
-    is_writable: bool,
-}
-
-impl From<TransactionAccount> for AccountMeta {
-    fn from(account: TransactionAccount) -> AccountMeta {
-        match account.is_writable {
-            false => AccountMeta::new_readonly(account.pubkey, account.is_signer),
-            true => AccountMeta::new(account.pubkey, account.is_signer),
-        }
-    }
-}
-
-#[derive(
-    AnchorSerialize,
-    AnchorDeserialize,
-    Clone,
-    PartialEq,
-)]
-pub struct StandaloneInstruction {
-    accounts: Vec<TransactionAccount>,
-    program_id: Pubkey,
-    data: Vec<u8>,
-}
-
 #[event]
 pub struct RevertSynthesizeCompleted {
     id: [u8; 32],
@@ -1508,11 +1357,5 @@ impl Default for RequestState {
     }
 }
 */
-
-#[derive(Accounts)]
-pub struct ReceiveRequest<'info> {
-    #[account(signer)]
-    proposer: AccountInfo<'info>,
-}
 
 // #endregion Bridge
