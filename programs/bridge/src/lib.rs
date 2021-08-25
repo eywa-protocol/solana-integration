@@ -17,6 +17,7 @@ use anchor_lang::{
     AnchorSerialize,
     AnchorDeserialize,
 };
+use anchor_lang::solana_program::keccak;
 
 declare_id!("TestBridge111111111111111111111111111111111");
 
@@ -24,6 +25,8 @@ declare_id!("TestBridge111111111111111111111111111111111");
 #[program]
 pub mod eywa_bridge {
     use super::*;
+    use eywa_lib::get_or_create_account_data;
+    use anchor_lang::solana_program::keccak;
 
     // Singleton Data Account
     #[state]
@@ -44,21 +47,21 @@ pub mod eywa_bridge {
             function receiveRequestV2(
                 bytes32 reqId,
                 bytes memory b,
-                address receiveSide,
+                address receive_side,
                 address bridgeFrom
             ) external onlyTrustedNode {
 
                 // TODO check and repair this function
-                // bytes32 recreateReqId = keccak256(abi.encodePacked(bridgeFrom, nonce[bridgeFrom], b, receiveSide, this, block.chainId));
+                // bytes32 recreateReqId = keccak256(abi.encodePacked(bridgeFrom, nonce[bridgeFrom], b, receive_side, this, block.chainId));
                 // require(reqId == recreateReqId, 'CONSISTENCY FAILED');
-                require(dexBind[receiveSide] == true, 'UNTRUSTED DEX');
+                require(dexBind[receive_side] == true, 'UNTRUSTED DEX');
 
-                (bool success, bytes memory data) = receiveSide.call(b);
+                (bool success, bytes memory data) = receive_side.call(b);
                 require(success && (data.length == 0 || abi.decode(data, (bool))), 'FAILED');
 
                 nonce[bridgeFrom] = nonce[bridgeFrom] + 1;
 
-                emit ReceiveRequest(reqId, receiveSide, reqId);
+                emit ReceiveRequest(reqId, receive_side, reqId);
             }
         */
         pub fn receive_request(
@@ -66,7 +69,7 @@ pub mod eywa_bridge {
             ctx: Context<ReceiveRequest>,
             req_id: [u8; 32], // bytes32 reqId,
             sinst: StandaloneInstruction,
-            // bytes memory b, address receiveSide,
+            // bytes memory b, address receive_side,
             bridge_from: [u8; 20], // address bridgeFrom
         ) -> Result<()> {
             // use std::convert::*;
@@ -119,15 +122,56 @@ pub mod eywa_bridge {
             &mut self,
             ctx: Context<TransmitRequest>,
             selector: Vec<u8>,
-            receive_side: [u8; 20],
-            opposite_bridge: [u8; 20],
+            receive_side: String,//[u8; 20],
+            opposite_bridge: String,//[u8; 20],
             chain_id: u64,
-            // nonce: &mut u64,
-        ) -> Result<()> {
+        ) -> ProgramResult {
+            // TODO: check whether the sender is included in the list of trusted nodes
+
+            let request_id = prepare_rq_id(&selector, opposite_bridge.clone(), chain_id, receive_side.clone());
+
+            let mut bridge_nonce: BridgeNonce = get_or_create_account_data(
+                &ctx.accounts.bridge_nonce,
+                &ctx.accounts.nonce_master_account,
+                &ctx.accounts.system_program,
+                &ctx.accounts.rent,
+                8,
+                (opposite_bridge.clone() + receive_side.as_str()).as_str(),
+                &[],
+                ctx.program_id,
+            )?;
+            bridge_nonce.nonce += 1;
+            bridge_nonce.serialize(&mut *ctx.accounts.bridge_nonce.try_borrow_mut_data()?)?;
+            
+            let event = OracleRequest{
+                request_type: "setRequest".to_string(),
+                bridge: *ctx.program_id,
+                request_id,
+                selector,
+                receive_side,
+                opposite_bridge,
+                chainid: 0
+            };
+            emit!(event);
 
             Ok(())
         }
     }
+}
+
+pub fn prepare_rq_id(
+    selector: &Vec<u8>,
+    opposite_bridge: String,//[u8; 20],
+    chain_id: u64,
+    receive_side: String,//[u8; 20],
+) -> [u8;32] {
+    let mut hasher = keccak::Hasher::default();
+    hasher.hash(
+        <(&Vec<u8>, String, u64, String) as borsh::BorshSerialize>::try_to_vec(&(selector, opposite_bridge, chain_id, receive_side))
+            .unwrap()
+            .as_slice(),
+    );
+    hasher.result().0
 }
 
 #[derive(Accounts)]
@@ -145,9 +189,29 @@ pub struct ReceiveRequest<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(
+    receive_side: [u8; 20],
+)]
 pub struct TransmitRequest<'info> {
     #[account(signer)]
     signer: AccountInfo<'info>, // portal-synthesis
+    #[account(signer, mut)]
+    nonce_master_account: AccountInfo<'info>,
+    #[account(mut)]
+    bridge_nonce: AccountInfo<'info>,
+    system_program: AccountInfo<'info>,
+    rent: Sysvar<'info, Rent>,
+}
+
+#[account]
+pub struct ContractBind {
+    sender_side: [u8; 20],
+}
+
+#[account]
+#[derive(Default)]
+pub struct BridgeNonce {
+    nonce: u64,
 }
 
 #[derive(
@@ -186,7 +250,7 @@ pub struct StandaloneInstruction {
 /*
     event ReceiveRequest(
         bytes32 reqId,
-        address receiveSide,
+        address receive_side,
         bytes32 tx
     );
 */
@@ -195,6 +259,18 @@ pub struct EvReceiveRequest {
     req_id: [u8; 32],
     receive_side: Pubkey,
     tx_id: [u8; 32],
+}
+
+#[event]
+pub struct OracleRequest {
+    request_type: String ,
+    bridge: Pubkey,
+    request_id: [u8; 32],
+    selector: Vec<u8>,
+    receive_side: String, //[u8; 20],
+    opposite_bridge: String, //[u8; 20],
+    chainid: u64,
+
 }
 
 
