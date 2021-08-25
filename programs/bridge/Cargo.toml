@@ -18,7 +18,7 @@ test-bpf = []
 [dependencies]
 anchor-lang = "0.12.0"
 solana-program = "1.7.8"
-eywa-lib =  { path = "../eywa-lib" }
+eywa-lib =  { path = "../../eywa-lib" }
 
 [dev-dependencies]
 solana-program-test = "1.7.8"
