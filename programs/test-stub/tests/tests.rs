@@ -24,7 +24,7 @@ use stub::{
 
 pub fn program_test() -> ProgramTest {
     ProgramTest::new(
-        "test_stub",
+        "stub",
         id(),
         processor!(stub::entry),
     )

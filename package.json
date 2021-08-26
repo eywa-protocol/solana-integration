@@ -6,6 +6,7 @@
     "test:rs:bridge": "cargo test-bpf --manifest-path programs/bridge/Cargo.toml",
     "test:rs:stub": "cargo test-bpf --manifest-path programs/test-stub/Cargo.toml",
     "test:rs": "cargo test-bpf",
+    "test:rs:bt": "RUST_BACKTRACE=1 cargo test-bpf",
     "test:internal1": "ts-mocha -p ./tsconfig.json -t 1000000 tests/*.ts",
     "test:internal": "ts-mocha -p ./tsconfig.json -t 1000000 tests/eywa-portal-solana.ts",
     "test:internal3": "ts-mocha -p ./tsconfig.json -t 1000000 tests/eywa-bridge-solana.ts",

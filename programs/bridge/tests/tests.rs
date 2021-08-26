@@ -33,7 +33,7 @@ pub fn program_test() -> ProgramTest {
 }
 
 #[tokio::test]
-async fn test_hello_world() {
+async fn test_state_new() {
     let (mut banks_client, payer, recent_blockhash) = program_test().start().await;
 
     let (program_signer, _nonce) = Pubkey::find_program_address(&[], &id());
