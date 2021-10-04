@@ -1,0 +1,21 @@
+{
+  "name": "eywa-solana-bridge-grpc",
+  "version": "0.0.1",
+  "scripts": {
+    "build:docker": "docker build -t eywa-solana-bridge-grpc .",
+    "start": "ts-node server.ts",
+    "start:docker": "docker run --name eywa-solana-bridge-grpc -p 127.0.0.1:50051:50051 eywa-solana-bridge-grpc",
+    "kill:docker": "docker stop eywa-solana-bridge-grpc && docker rm eywa-solana-bridge-grpc",
+    "start:client": "ts-node test-client.ts"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.3.7",
+    "@grpc/proto-loader": "^0.6.5",
+    "ts-node": "^10.2.1",
+    "tslib": "^2.3.1",
+    "typescript": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^16.10.2"
+  }
+}
