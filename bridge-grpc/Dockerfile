@@ -6,7 +6,9 @@ COPY . .
 
 RUN npm i --production
 
+# HTTP/2
 EXPOSE 8080
-EXPOSE 50051
+# Health_check HTTP/1.1
+EXPOSE 8081 
 
 CMD [ "npm", "start" ]

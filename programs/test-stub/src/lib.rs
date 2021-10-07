@@ -6,15 +6,11 @@ use anchor_lang::{
     },
 };
 
-declare_id!("TestStub11111111111111111111111111111111111");
+declare_id!("DMzorxwVcxZR8gat6YiSKs87nC3Ew1MLupcsJDRpv8Ce");
 
 #[program]
 pub mod test_stub {
     use super::*;
-
-    // pub fn initialize(_ctx: Context<Initialize>) -> ProgramResult {
-    //     Ok(())
-    // }
 
     pub fn hello(
         ctx: Context<Hello>,
@@ -29,14 +25,29 @@ pub mod test_stub {
 
         Ok(())
     }
+
+    pub fn hello_signed(
+        ctx: Context<HelloSigned>,
+        name: String,
+    ) -> ProgramResult {
+        let message = format!(
+            "Hello, {}! (Signed)\n{}",
+            name,
+            ctx.accounts.person.key,
+        );
+        msg!("\n{}", message);
+
+        Ok(())
+    }
 }
-
-// #[derive(Accounts)]
-// pub struct Initialize {}
-
 
 #[derive(Accounts)]
 pub struct Hello<'info> {
-    // #[account(signer)]
+    person: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct HelloSigned<'info> {
+    #[account(signer)]
     person: AccountInfo<'info>,
 }

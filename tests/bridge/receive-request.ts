@@ -12,6 +12,8 @@ import { sendAndConfirmTransaction } from '../utils/send-and-confirm-transaction
 import type { Provider } from '@project-serum/anchor';
 import type { AsyncParam } from '../utils/async-param';
 
+import { Logger } from '../../utils-ts';
+
 
 interface TransactionAccount {
   pubkey: PublicKey;
@@ -24,10 +26,7 @@ interface StandaloneInstruction {
   data: Buffer;
 }
 
-const logPublicKey = (title: string, key: PublicKey) => {
-  console.log(title, 'base58:', key.toBase58());
-  console.log(title, 'hex:', key.toBuffer().toString('hex'));
-}
+const logger = new Logger();
 
 export const ReceiveRequestTests = ({
   provider,
@@ -40,7 +39,7 @@ export const ReceiveRequestTests = ({
 
   before(async () => {
     accAdmin = (await admin.createPromise()) as web3.Keypair;
-    logPublicKey('accAdmin', accAdmin.publicKey);
+    logger.logPublicKey('accAdmin', accAdmin.publicKey);
   });
 
   it.skip("Hello World", async () => {
@@ -93,7 +92,7 @@ export const ReceiveRequestTests = ({
       [event, slot] = await new Promise((resolve, reject) => {
         console.log('setting listener');
         listener = program.addEventListener(
-          'EvReceiveRequest',
+          'ReceiveRequest',
           (event, slot) => resolve([event, slot]),
         );
 

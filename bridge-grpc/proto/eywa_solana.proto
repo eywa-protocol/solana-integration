@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+// import "google/protobuf/any.proto";
+// import "google/protobuf/empty.proto";
+
+option go_package = "github.com/digiu-ai/eywa-solana-grpc";
+
+package eywa_solana_grpc;
+
+service Bridge {
+  rpc subscribeOracleRequest(Empty) returns (stream OracleRequest) {}
+}
+
+message uinteger256 {
+  fixed64 id_0 = 1;
+  fixed64 id_1 = 2;
+  fixed64 id_2 = 3;
+  fixed64 id_3 = 4;
+}
+
+message uinteger160 {
+  fixed64 id_0 = 1;
+  fixed64 id_1 = 2;
+  fixed32 id_2 = 3;
+}
+
+message OracleRequest{
+  string request_type = 1;
+  uinteger256 bridge = 2;
+  uinteger256 request_id = 3;
+  bytes selector = 4;
+  string receive_side = 5;
+  string opposite_bridge = 6;
+  fixed64 chainid = 7;
+}
+
+message Empty {
+}

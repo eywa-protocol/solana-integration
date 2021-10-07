@@ -17,24 +17,22 @@ use solana_sdk::{
     transaction::Transaction,
 };
 
-use stub::{
+use test_stub::{
     id,
     instruction,
 };
 
 pub fn program_test() -> ProgramTest {
     ProgramTest::new(
-        "stub",
+        "test_stub",
         id(),
-        processor!(stub::entry),
+        processor!(test_stub::entry),
     )
 }
 
 #[tokio::test]
 async fn test_hello_world() {
     let (mut banks_client, payer, recent_blockhash) = program_test().start().await;
-    // let pub_payer = payer.pubkey();
-    // let opt_ref_pub_payer = Some(&pub_payer);
     let pub_test_acc = Pubkey::from_str("TestPubkey111111111111111111111111111111111").unwrap();
 
     let ix_hello = Instruction {
@@ -56,5 +54,4 @@ async fn test_hello_world() {
 
     transaction.sign(&[&payer], recent_blockhash);
     banks_client.process_transaction(transaction).await.unwrap();
-    // println!("Hello World!");
 }

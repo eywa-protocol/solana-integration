@@ -1,0 +1,26 @@
+[package]
+name = "eywa-bridge"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "eywa_bridge"
+doctest = false
+
+[features]
+no-entrypoint = []
+no-idl = []
+cpi = ["no-entrypoint"]
+default = []
+test-bpf = []
+
+[dependencies]
+eywa-lib =  { path = "../../eywa-lib" }
+anchor-lang = "=0.16.1"
+solana-program = "=1.7.11"
+
+[dev-dependencies]
+solana-program-test = "=1.7.11"
+solana-sdk = "=1.7.11"

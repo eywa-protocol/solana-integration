@@ -1,18 +1,7 @@
-// Copyright 2015 gRPC authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 syntax = "proto3";
+
+import "google/protobuf/any.proto";
+import "google/protobuf/empty.proto";
 
 option java_multiple_files = true;
 option java_package = "io.grpc.examples.helloworld";
@@ -24,15 +13,134 @@ package helloworld;
 // The greeting service definition.
 service Greeter {
   // Sends a greeting
-  rpc SayHello (HelloRequest) returns (HelloReply) {}
+  rpc SayHello (Request) returns (HelloReply) {}
+  rpc sayHello2 (Request) returns (stream HelloReply) {}
+}
+
+service Portal {
+  rpc subscribe_portal(google.protobuf.Empty) returns (stream PortalSynthesysMsg) {}
+}
+
+service Synthesis {
+  rpc subscribe_synthesis(google.protobuf.Empty) returns (stream SynthesisMsg) {}
+}
+
+service Bridge {
+  rpc subscribe_bridge(google.protobuf.Empty) returns (stream BridgeMsg) {}
 }
 
 // The request message containing the user's name.
-message HelloRequest {
+message Request {
   string name = 1;
 }
 
 // The response message containing the greetings
 message HelloReply {
   string message = 1;
+}
+
+//Dev suits
+message uinteger256 {
+  fixed64 id_0 = 1;
+  fixed64 id_1 = 2;
+  fixed64 id_2 = 3;
+  fixed64 id_3 = 4;
+}
+
+message uinteger160 {
+  fixed64 id_0 = 1;
+  fixed64 id_1 = 2;
+  fixed32 id_2 = 3;
+}
+
+// Message for Synthesis
+message BurnRequest{
+  uinteger256 id = 1;
+  uinteger256 from = 2;
+  uinteger256 to = 3;
+  fixed64 amount = 4;
+  uinteger160 token = 5;
+}
+
+message SynthesizeCompleted {
+  uinteger256 id = 1;
+  uinteger256 to = 2;
+  fixed64 amount = 3;
+  uinteger160 token = 4;
+}
+
+message RevertBurnCompleted {
+  uinteger256 id = 1;
+  uinteger256 to = 2;
+  fixed64 amount = 3;
+  uinteger160 token = 4;
+}
+
+message RevertBurnRequest {
+  string id = 1;
+  uinteger256 to = 2;
+}
+
+message RevertSynthesizeRequest{
+  uinteger256 id = 1;
+  uinteger256 to = 2;
+}
+
+message SynthesisMsg {
+  BurnRequest reqBurn = 1;
+  RevertBurnRequest reqRevertBurn = 2;
+  RevertSynthesizeRequest reqRevertSynthesize = 3;
+  SynthesizeCompleted complSynthesize = 4;
+  RevertBurnCompleted complRevertBurn = 5;
+}
+// Message for Portal
+message SynthesizeRequest {
+  uinteger256 id = 1;
+  uinteger256 from = 2;
+  uinteger160 to = 3;
+  fixed64 amount = 4;
+  uinteger256 real_token = 5;
+}
+
+message BurnCompleted {
+  string id = 1;
+  uinteger256 to = 2;
+  fixed64 amount = 3;
+  uinteger256 token = 4;
+}
+
+message RevertSynthesizeCompleted {
+  uinteger256 id = 1;
+  uinteger256 to = 2;
+  fixed64 amount = 3;
+  uinteger256 token = 4;
+}
+
+message PortalSynthesysMsg {
+  SynthesizeRequest reqSyntesize = 1;
+  RevertBurnRequest reqRevertBurn = 2;
+  BurnCompleted complBurn = 3;
+  RevertSynthesizeCompleted complRevertSynthesize = 4;
+}
+
+// Message for Bridge
+message OracleRequest{
+  string request_type = 1;
+  uinteger256 bridge = 2;
+  uinteger256 request_id = 3;
+  google.protobuf.Any selector = 4;
+  string receive_side = 5;
+  string opposite_bridge = 6;
+  fixed64 chainid = 7;
+}
+
+message ReceiveRequest {
+  uinteger256 req_id = 1;
+  uinteger256 receive_side = 2;
+  uinteger256 tx_id = 3;
+}
+
+message BridgeMsg {
+  OracleRequest reqOracle = 1;
+  ReceiveRequest reqReceive = 2;
 }

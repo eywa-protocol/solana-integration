@@ -1,0 +1,320 @@
+{
+  "version": "0.0.0",
+  "name": "eywa_bridge",
+  "instructions": [
+    {
+      "name": "initialize",
+      "accounts": [
+        {
+          "name": "settings",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "bumpSeed",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "receiveRequest",
+      "accounts": [
+        {
+          "name": "proposer",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "reqId",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "sinst",
+          "type": {
+            "defined": "StandaloneInstruction"
+          }
+        },
+        {
+          "name": "bridgeFrom",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "transmitRequest",
+      "accounts": [
+        {
+          "name": "settings",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "selector",
+          "type": "bytes"
+        },
+        {
+          "name": "receiveSide",
+          "type": "string"
+        },
+        {
+          "name": "oppositeBridge",
+          "type": "string"
+        },
+        {
+          "name": "chainId",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "ContractBind",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "senderSide",
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "BridgeNonce",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "nonce",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Settings",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "publicKey"
+          },
+          {
+            "name": "nonce",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "StandaloneInstruction",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accounts",
+            "type": {
+              "vec": {
+                "defined": "TransactionAccount"
+              }
+            }
+          },
+          {
+            "name": "programId",
+            "type": "publicKey"
+          },
+          {
+            "name": "data",
+            "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TransactionAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pubkey",
+            "type": "publicKey"
+          },
+          {
+            "name": "isSigner",
+            "type": "bool"
+          },
+          {
+            "name": "isWritable",
+            "type": "bool"
+          }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "OracleRequest",
+      "fields": [
+        {
+          "name": "requestType",
+          "type": "string",
+          "index": false
+        },
+        {
+          "name": "bridge",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "requestId",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          },
+          "index": false
+        },
+        {
+          "name": "selector",
+          "type": "bytes",
+          "index": false
+        },
+        {
+          "name": "receiveSide",
+          "type": "string",
+          "index": false
+        },
+        {
+          "name": "oppositeBridge",
+          "type": "string",
+          "index": false
+        },
+        {
+          "name": "chainid",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "ReceiveRequest",
+      "fields": [
+        {
+          "name": "reqId",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          },
+          "index": false
+        },
+        {
+          "name": "receiveSide",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "txId",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          },
+          "index": false
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 1534,
+      "name": "Test",
+      "msg": "This is an error message clients will automatically display 1234"
+    },
+    {
+      "code": 2300,
+      "name": "Unauthorized",
+      "msg": "Unauthorized"
+    },
+    {
+      "code": 2301,
+      "name": "UntrustedDex",
+      "msg": "UNTRUSTED DEX"
+    },
+    {
+      "code": 2302,
+      "name": "IndexOutOfBounds",
+      "msg": "index out of bounds"
+    },
+    {
+      "code": 2303,
+      "name": "ValueOutOfBounds",
+      "msg": "value out of bounds"
+    },
+    {
+      "code": 2304,
+      "name": "InvalidValue",
+      "msg": "invalid value"
+    }
+  ],
+  "metadata": {
+    "address": "DXUDgvk4YH47J2HzRDKAsp5zcrvWDXqsCbD3HTghpyCo"
+  }
+}

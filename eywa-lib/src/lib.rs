@@ -1,7 +1,23 @@
-use anchor_lang::prelude::{AccountInfo, Rent, ProgramResult, Pubkey, ProgramError};
-use anchor_lang::{Sysvar, AccountSerialize, AccountDeserialize};
-use anchor_lang::prelude::borsh::BorshDeserialize;
-use anchor_lang::solana_program::system_program;
+use anchor_lang::{
+    AccountDeserialize,
+    AccountSerialize,
+    prelude::{
+        AccountInfo,
+        borsh::BorshDeserialize,
+        Rent,
+        ProgramResult,
+        Pubkey,
+        ProgramError,
+    },
+    solana_program::{
+        program::invoke_signed,
+        system_instruction,
+        system_program,
+    },
+    Sysvar,
+};
+use std::convert::TryInto;
+
 
 pub fn create_account<'info>(
     data_account: &AccountInfo<'info>,
@@ -11,8 +27,10 @@ pub fn create_account<'info>(
     space: u64,
     seed: &[&[&[u8]]],
 ) -> ProgramResult {
-    let lamports = rent.minimum_balance(std::convert::TryInto::try_into(space).unwrap());
-    let ix = anchor_lang::solana_program::system_instruction::create_account(
+    let lamports = rent.minimum_balance(
+        TryInto::try_into(space).unwrap(),
+    );
+    let ix = system_instruction::create_account(
         master_account.key,
         data_account.key,
         lamports,
@@ -26,7 +44,7 @@ pub fn create_account<'info>(
         system_program.clone(),
     ];
 
-    anchor_lang::solana_program::program::invoke_signed(&ix, &accounts, seed)
+    invoke_signed(&ix, &accounts, seed)
 }
 
 pub fn create_account_with_seed<'info>(
@@ -39,8 +57,10 @@ pub fn create_account_with_seed<'info>(
     seeds: &[&[&[u8]]],
     program_id: &Pubkey,
 ) -> ProgramResult {
-    let lamports = rent.minimum_balance(std::convert::TryInto::try_into(space).unwrap());
-    let ix = anchor_lang::solana_program::system_instruction::create_account_with_seed(
+    let lamports = rent.minimum_balance(
+        TryInto::try_into(space).unwrap(),
+    );
+    let ix = system_instruction::create_account_with_seed(
         master_account.key,
         data_account.key,
         master_account.key,
@@ -56,7 +76,7 @@ pub fn create_account_with_seed<'info>(
         system_program.clone(),
     ];
 
-    anchor_lang::solana_program::program::invoke_signed(&ix, &accounts, seeds)
+    invoke_signed(&ix, &accounts, seeds)
 }
 
 pub fn get_or_create_account_data<'info, T>(

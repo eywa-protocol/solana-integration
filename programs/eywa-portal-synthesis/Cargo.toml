@@ -1,0 +1,29 @@
+[package]
+name = "eywa-portal-synthesis"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "eywa_portal_synthesis"
+doctest = false
+
+[features]
+no-entrypoint = []
+no-idl = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+eywa-lib =  { path = "../../eywa-lib" }
+eywa-bridge =  { path = "../eywa-bridge", features = ["cpi"] }
+anchor-lang = "=0.16.1"
+anchor-spl = "=0.16.1"
+solana-program = "=1.7.11"
+spl-token = { version = "=3.2.0", features = ["no-entrypoint"] }
+
+[dev-dependencies]
+solana-program-test = "=1.7.11"
+solana-sdk = "=1.7.11"
+

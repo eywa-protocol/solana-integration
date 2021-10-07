@@ -1,0 +1,959 @@
+{
+  "version": "0.0.0",
+  "name": "eywa_portal_synthesis",
+  "instructions": [
+    {
+      "name": "initialize",
+      "accounts": [
+        {
+          "name": "settings",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "bridge",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "bumpSeed",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "mintSyntheticToken",
+      "accounts": [
+        {
+          "name": "mintSynt",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "to",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "mintData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "thisProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "bumpSeedMint",
+          "type": "u8"
+        },
+        {
+          "name": "tokenReal",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "txId",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "emergencyUnsyntesizeRequest",
+      "accounts": [
+        {
+          "name": "mint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "mintData",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "txId",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "burnSyntheticToken",
+      "accounts": [
+        {
+          "name": "mint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "mintData",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "txId",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "emergencyUnburn",
+      "accounts": [
+        {
+          "name": "mint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "mintData",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "txId",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "createRepresentation",
+      "accounts": [
+        {
+          "name": "settings",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "mintSynt",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "mintData",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "bumpSeedMint",
+          "type": "u8"
+        },
+        {
+          "name": "bumpSeedData",
+          "type": "u8"
+        },
+        {
+          "name": "tokenReal",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "syntDecimals",
+          "type": "u8"
+        },
+        {
+          "name": "syntName",
+          "type": "string"
+        },
+        {
+          "name": "syntSymbol",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "synthesize",
+      "accounts": [
+        {
+          "name": "settings",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "synthesizeRequest",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "realToken",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "source",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destination",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "client",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "pdaMaster",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "bridgeSettings",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "bridgeProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "bumpSeedSynthesizeRequest",
+          "type": "u8"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "chainToAddress",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "receiveSide",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "oppositeBridge",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "chainId",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "emergencyUnsynthesize",
+      "accounts": [
+        {
+          "name": "settings",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "synthesizeRequest",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "realToken",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "source",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destination",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "client",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "pdaMaster",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "bridgeProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "bumpSeedSynthesizeRequest",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "unsynthesize",
+      "accounts": [
+        {
+          "name": "settings",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "unsynthesizeState",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "statesMasterAccount",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "sourceAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destinationAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ownerAccount",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "splTokenAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "bridge",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "token",
+          "type": "publicKey"
+        },
+        {
+          "name": "txId",
+          "type": "string"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "emergencyUnburnRequest",
+      "accounts": [
+        {
+          "name": "settings",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "unsynthesizeState",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "statesMasterAccount",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "nonceMasterAccount",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "bridgeNonce",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "messageSender",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "pdaMaster",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "bridgeSettings",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "bridgeProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "txId",
+          "type": "string"
+        },
+        {
+          "name": "receiveSide",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "oppositeBridge",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "chainId",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "UnsynthesizeStatesInfo",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "state",
+            "type": {
+              "defined": "UnsynthesizeStates"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Settings",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "owner",
+            "type": "publicKey"
+          },
+          {
+            "name": "portalNonce",
+            "type": "u64"
+          },
+          {
+            "name": "bridge",
+            "type": "publicKey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BridgeNonce",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "nonce",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MintData",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "tokenReal",
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          },
+          {
+            "name": "tokenSynt",
+            "type": "publicKey"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "symbol",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SynthesizeRequestInfo",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "recipient",
+            "type": "publicKey"
+          },
+          {
+            "name": "chainToAddress",
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          },
+          {
+            "name": "realToken",
+            "type": "publicKey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "state",
+            "type": {
+              "defined": "RequestState"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "UnsynthesizeStates",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Default"
+          },
+          {
+            "name": "Unsynthesized"
+          },
+          {
+            "name": "RevertRequest"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RequestState",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Default"
+          },
+          {
+            "name": "Sent"
+          },
+          {
+            "name": "Reverted"
+          }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "BurnRequest",
+      "fields": [
+        {
+          "name": "id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          },
+          "index": true
+        },
+        {
+          "name": "from",
+          "type": "publicKey",
+          "index": true
+        },
+        {
+          "name": "to",
+          "type": "publicKey",
+          "index": true
+        },
+        {
+          "name": "amount",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          },
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "RevertSynthesizeRequest",
+      "fields": [
+        {
+          "name": "id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          },
+          "index": true
+        },
+        {
+          "name": "to",
+          "type": "publicKey",
+          "index": true
+        }
+      ]
+    },
+    {
+      "name": "SynthesizeCompleted",
+      "fields": [
+        {
+          "name": "id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          },
+          "index": true
+        },
+        {
+          "name": "to",
+          "type": "publicKey",
+          "index": true
+        },
+        {
+          "name": "amount",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          },
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "RevertBurnCompleted",
+      "fields": [
+        {
+          "name": "id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          },
+          "index": true
+        },
+        {
+          "name": "to",
+          "type": "publicKey",
+          "index": true
+        },
+        {
+          "name": "amount",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          },
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "SynthesizeRequest",
+      "fields": [
+        {
+          "name": "id",
+          "type": "publicKey",
+          "index": true
+        },
+        {
+          "name": "from",
+          "type": "publicKey",
+          "index": true
+        },
+        {
+          "name": "to",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          },
+          "index": true
+        },
+        {
+          "name": "amount",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "realToken",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "RevertBurnRequest",
+      "fields": [
+        {
+          "name": "id",
+          "type": "string",
+          "index": true
+        },
+        {
+          "name": "to",
+          "type": "publicKey",
+          "index": true
+        }
+      ]
+    },
+    {
+      "name": "BurnCompleted",
+      "fields": [
+        {
+          "name": "id",
+          "type": "string",
+          "index": true
+        },
+        {
+          "name": "to",
+          "type": "publicKey",
+          "index": true
+        },
+        {
+          "name": "amount",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "token",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "RevertSynthesizeCompleted",
+      "fields": [
+        {
+          "name": "id",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "to",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "amount",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "token",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "address": "7gRLkKiavHbYX29kjPrm2jXcrFYYEKZUrNUxmBTMBDtU"
+  }
+}
