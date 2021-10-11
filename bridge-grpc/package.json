@@ -4,6 +4,7 @@
   "scripts": {
     "build:docker": "docker build -t eywa-solana-bridge-grpc .",
     "test": "ts-node ./tests/subscribe-oracle-request.ts",
+    "test2": "ts-node ./tests/subscribe-slot-change.ts",
     "gen": "grpc_tools_node_protoc -I ./proto --plugin=protoc-gen-ts=./node_modules/.bin/protoc-gen-ts --ts_out=grpc_js:./proto --js_out=import_style=commonjs,binary:./proto --grpc_out=grpc_js:./proto  ./proto/eywa_solana.proto",
     "gen:help": "grpc_tools_node_protoc --help",
     "start": "ts-node server.ts",

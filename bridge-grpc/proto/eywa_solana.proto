@@ -1,27 +1,31 @@
 syntax = "proto3";
 
 // import "google/protobuf/any.proto";
-// import "google/protobuf/empty.proto";
+import "google/protobuf/empty.proto";
 
 option go_package = "github.com/digiu-ai/eywa-solana-grpc";
 
 package eywa_solana_grpc;
 
 service Bridge {
-  rpc subscribeOracleRequest(Empty) returns (stream OracleRequest) {}
+  rpc subscribeOracleRequest(google.protobuf.Empty) returns (stream OracleRequest) {}
+  rpc testOracleRequest(OracleRequest) returns (google.protobuf.Empty) {}
+  rpc subscribeSlotChange(google.protobuf.Empty) returns (stream SlotInfo) {}
 }
 
 message uinteger256 {
-  fixed64 id_0 = 1;
-  fixed64 id_1 = 2;
-  fixed64 id_2 = 3;
-  fixed64 id_3 = 4;
+  // fixed64 id_0 = 1;
+  // fixed64 id_1 = 2;
+  // fixed64 id_2 = 3;
+  // fixed64 id_3 = 4;
+  bytes value = 1;
 }
 
 message uinteger160 {
-  fixed64 id_0 = 1;
-  fixed64 id_1 = 2;
-  fixed32 id_2 = 3;
+  // fixed64 id_0 = 1;
+  // fixed64 id_1 = 2;
+  // fixed32 id_2 = 3;
+  bytes value = 1;
 }
 
 message OracleRequest{
@@ -29,10 +33,23 @@ message OracleRequest{
   uinteger256 bridge = 2;
   uinteger256 request_id = 3;
   bytes selector = 4;
-  string receive_side = 5;
-  string opposite_bridge = 6;
+  uinteger160 receive_side = 5;
+  uinteger160 opposite_bridge = 6;
   fixed64 chainid = 7;
 }
 
-message Empty {
+// message Empty {
+// }
+
+/*
+  export type SlotInfo = {
+    slot: number; // Currently processing slot
+    parent: number; // Parent of the current slot
+    root: number; // The root block of the current slot's fork
+  };
+*/
+message SlotInfo {
+  fixed64 slot = 1;
+  fixed64 parent = 2;
+  fixed64 root = 3;
 }

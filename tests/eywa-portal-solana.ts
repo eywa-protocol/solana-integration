@@ -1,10 +1,10 @@
 import { assert, expect } from 'chai';
 
 import {
-    BN,
-    Provider,
-    setProvider,
-    web3,
+  BN,
+  Provider,
+  setProvider,
+  web3,
 } from '@project-serum/anchor';
 import {
   Token,
@@ -18,246 +18,292 @@ import { Logger } from '../utils-ts';
 const logger = new Logger();
 
 describe('eywa-portal-solana', () => {
-    const provider = Provider.env();
-    setProvider(provider);
+  const provider = Provider.env();
+  setProvider(provider);
 
-    const helper = new SolanaHelper(provider);
-    const factory = new BridgeFactory(provider.connection);
-    const { bridge, stub, main } = factory;
+  const helper = new SolanaHelper(provider);
+  const factory = new BridgeFactory(provider.connection);
+  const { bridge, stub, main } = factory;
 
-    const accAdmin = web3.Keypair.generate();
-    const accMinter = web3.Keypair.generate();
+  const accAdmin = web3.Keypair.generate();
+  const accMinter = web3.Keypair.generate();
 
-    let token: Token;
+  let token: Token;
 
-    before(async () => {
-      logger.logPublicKey('TOKEN_PROGRAM_ID', TOKEN_PROGRAM_ID);
-      logger.logPublicKey('SYSVAR_RENT_PUBKEY', web3.SYSVAR_RENT_PUBKEY);
-      logger.logPublicKey('SystemProgram', web3.SystemProgram.programId);
+  let signature: Promise<web3.TransactionSignature>;
 
-      await helper.transfer(new BN('10000000000000000'), accAdmin.publicKey);
+  before(async () => {
+    logger.logPublicKey('TOKEN_PROGRAM_ID', TOKEN_PROGRAM_ID);
+    logger.logPublicKey('SYSVAR_RENT_PUBKEY', web3.SYSVAR_RENT_PUBKEY);
+    logger.logPublicKey('SystemProgram', web3.SystemProgram.programId);
+    logger.logPublicKey('Main PID', main.pid);
 
-      const tx = new web3.Transaction();
-      tx.add(await bridge.init(accAdmin));
-      tx.recentBlockhash = await helper.getRecentBlockhash();
-      await helper.sendAndConfirmTransaction('Initialize bridge', tx, accAdmin);
+    await helper.transfer(new BN('10000000000000000'), accAdmin.publicKey);
 
-      const accPayerHelper = web3.Keypair.generate();
-      logger.logPublicKey('accPayerHelper', accPayerHelper.publicKey);
-      await helper.transfer(new BN('10000000000000000'), accPayerHelper.publicKey);
-      logger.log('sponsored');
+    const tx = new web3.Transaction();
+    tx.add(await bridge.init(accAdmin));
+    tx.recentBlockhash = await helper.getRecentBlockhash();
+    await (signature = helper.sendAndConfirmTransaction(
+      'Initialize bridge',
+      tx,
+      accAdmin
+    ));
 
-      logger.logPublicKey('accMinter', accMinter.publicKey);
+    const accPayerHelper = web3.Keypair.generate();
+    logger.logPublicKey('accPayerHelper', accPayerHelper.publicKey);
+    await helper.transfer(
+      new BN('10000000000000000'),
+      accPayerHelper.publicKey
+    );
+    logger.log('sponsored');
 
-      token = await Token.createMint(
-        provider.connection,
-        accPayerHelper,
-        accMinter.publicKey,
-        accMinter.publicKey,
-        2,
-        TOKEN_PROGRAM_ID,
+    logger.logPublicKey('accMinter', accMinter.publicKey);
+
+    token = await Token.createMint(
+      provider.connection,
+      accPayerHelper,
+      accMinter.publicKey,
+      accMinter.publicKey,
+      2,
+      TOKEN_PROGRAM_ID
+    );
+
+    logger.log('Mint created');
+  });
+
+  const INIT_SETTINGS = 'Init Settings';
+  it(INIT_SETTINGS, async () => {
+    const tx1 = new web3.Transaction();
+    tx1.add(await main.init(accAdmin.publicKey));
+    await helper.sendAndConfirmTransaction(INIT_SETTINGS, tx1, accAdmin);
+
+    const account = await main.fetchSettings();
+    expect(account.owner.toString()).eq(accAdmin.publicKey.toString());
+    // assert.ok(account.data.eq(new BN(1234)));
+    // apSettings.resolve({ pubSettings, bumpSettings });
+  });
+
+  const CHECK_ACCADMIN = 'Check accAdmin';
+  it(CHECK_ACCADMIN, async () => {
+    const parsedTx = await provider.connection.getParsedConfirmedTransaction(
+      await signature,
+      'confirmed'
+    );
+
+    if (parsedTx === null) {
+      expect(parsedTx).not.to.be.null;
+      return;
+    }
+
+    const { signatures } = parsedTx.transaction;
+    expect(signatures[0]).to.eq(await signature);
+  });
+
+  const PORTAL_SYNTHESIZE = 'Portal Synthesize';
+  it(PORTAL_SYNTHESIZE, async () => {
+    logger.logPublicKey('accAdmin', accAdmin.publicKey);
+
+    const accUser = web3.Keypair.generate();
+    logger.logPublicKey('accUser', accUser.publicKey);
+    await helper.transfer(new BN('10000000000000000'), accUser.publicKey);
+    logger.log('sponsored');
+
+    const pubSource = await token.createAssociatedTokenAccount(
+      accUser.publicKey
+    );
+    logger.logPublicKey('pubSource', pubSource);
+    await token.mintTo(pubSource, accMinter.publicKey, [accMinter], 1000);
+    logger.log('mintTo');
+
+    // const realToken = /* 0x */ '1234567890123456789012345678901234567890';
+
+    const amount = 10;
+    const chainToAddress = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    const receiveSide = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    const oppositeBridge = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    const chainId = 14;
+
+    logger.logPublicKey('token.publicKey', token.publicKey);
+
+    const pubPDAMaster = await main.getSettingsAddress();
+    logger.log('approve');
+    await token.approve(pubSource, pubPDAMaster, accUser, [], amount);
+
+    expect((await token.getAccountInfo(pubSource)).isInitialized).to.eq(true);
+
+    // logger.log(await token.getAccountInfo(pubSource));
+    const supply = (await provider.connection.getTokenSupply(token.publicKey))
+      .value;
+
+    expect(supply.uiAmount).to.eq(amount);
+
+    logger.log('ixSynthesize');
+    const ixSynthesize = await main.synthesize(
+      new BN(amount),
+      // bumpPDAMaster,
+      chainToAddress,
+      receiveSide,
+      oppositeBridge,
+      new BN(chainId),
+      token.publicKey,
+      accUser.publicKey,
+      pubSource
+    );
+
+    const pubDestination = await main.getAssociatedTokenAddress(
+      token.publicKey
+    );
+    let isDestinationInitialized = false;
+    // (await token.getAccountInfo(pubDestination)).isInitialized
+    const tx1 = new web3.Transaction();
+    if (!isDestinationInitialized) {
+      /*
+      tx1.add(
+        Token.createAssociatedTokenAccountInstruction(
+          token.associatedProgramId,
+          token.programId,
+          token.publicKey,
+          pubDestination,
+          pubPDAMaster,
+          accUser.publicKey
+        )
       );
-      logger.log('Mint created');
-    });
+      */
+      const tx2 = new web3.Transaction();
+      tx2.add(await main.createRepresentationRequest(
+        token.publicKey,
+        accAdmin.publicKey,
+      ));
+      await helper.sendAndConfirmTransaction('createRepresentationRequest', tx2, accAdmin);
+    }
+    tx1.add(ixSynthesize);
 
-    const INIT_SETTINGS = 'Init Settings';
-    it(INIT_SETTINGS, async () => {
-      const tx1 = new web3.Transaction();
-      tx1.add(await main.init(accAdmin.publicKey));
-      await helper.sendAndConfirmTransaction(INIT_SETTINGS, tx1, accAdmin);
+    await helper.sendAndConfirmTransaction(PORTAL_SYNTHESIZE, tx1, accUser);
 
-      const account = await main.fetchSettings();
-      expect(account.owner.toString()).eq(accAdmin.publicKey.toString());
-      // assert.ok(account.data.eq(new BN(1234)));
-      // apSettings.resolve({ pubSettings, bumpSettings });
-    });
+    logger.log('synthesizeRequestAccount');
+    logger.log(await main.fetchSynthesizeRequestAccountInfo(token.publicKey));
+
+    logger.log('fetch pubSynthesizeRequest');
+    const dataSynthesizeRequest = await main.fetchSynthesizeRequest(
+      token.publicKey
+    );
+
+    dataSynthesizeRequest;
+    logger.log(dataSynthesizeRequest);
+
+    const dataDestination = await token.getAccountInfo(pubDestination);
+    logger.log(dataDestination);
 
 
-    const PORTAL_SYNTHESIZE = 'Portal Synthesize';
-    it(PORTAL_SYNTHESIZE, async () => {
-      logger.logPublicKey('accAdmin', accAdmin.publicKey);
+    logger.log('emergencyUnsynthesize');
+    const ixEmergencyUnsynthesize = await main.emergencyUnsynthesize(
+      token.publicKey,
+      accUser.publicKey,
+      pubSource,
+    );
+    const tx2 = new web3.Transaction();
+    tx2.add(ixEmergencyUnsynthesize);
+    await helper.sendAndConfirmTransaction('send emergencyUnsynthesize', tx2, accUser);
 
-      const accUser = web3.Keypair.generate();
-      logger.logPublicKey('accUser', accUser.publicKey);
-      await helper.transfer(new BN('10000000000000000'), accUser.publicKey);
-      logger.log('sponsored');
+    logger.log('synthesizeRequestAccount');
+    logger.log(await main.fetchSynthesizeRequestAccountInfo(
+      token.publicKey,
+    ));
 
-      const pubSource = await token.createAssociatedTokenAccount(accUser.publicKey);
-      logger.logPublicKey('pubSource', pubSource);
-      await token.mintTo(pubSource, accMinter.publicKey, [accMinter], 1000);
-      logger.log('mintTo');
+    // assert.ok(synthesizeRequestAccount.data.slice(120, 128)[0] == 2)
+  });
 
-      const realToken = /* 0x */"1234567890123456789012345678901234567890";
+  it.skip('Portal unsynthesize', async () => {
+    /*
+    let tx_id = '1234';
+    let owner = provider.wallet;
+    let mint = await createMint(provider);
+    let statesMasterAccount = new web3.Account();
+    await provider.connection.confirmTransaction(
+        await provider.connection.requestAirdrop(statesMasterAccount.publicKey, 10000000000),
+        'confirmed'
+    );
 
-      const amount = 10;
-      const chainToAddress = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8]);
-      const receiveSide = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8]);
-      const oppositeBridge = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8]);
-      const chainId = 14;
+    const unsynthesizeState = await web3.PublicKey.createWithSeed(
+        statesMasterAccount.publicKey,
+        tx_id,
+        program.programId
+    )
 
-      logger.logPublicKey('token.publicKey', token.publicKey);
+    let amount = 10;
+    let minted = 1000;
+    let sourceAccount = await createTokenAccount(provider, mint, provider.wallet.publicKey);
+    await mintToAccount(provider, mint, sourceAccount, minted, owner.publicKey)
 
-      const pubPDAMaster = await main.getSettingsAddress();
-      logger.log('approve');
-      await token.approve(pubSource, pubPDAMaster, accUser, [], amount);
-      logger.log(await token.getAccountInfo(pubSource));
+    let destinationAccount = await createTokenAccount(provider, mint, provider.wallet.publicKey);
+    // let splTokenKey = new anchor.web3.PublicKey(
+    //     TokenInstructions.TOKEN_PROGRAM_ID.toString()
+    // );
 
-      logger.log('ixSynthesize');
-      const ixSynthesize = await main.synthesize(
+    const [pubSettings, bumpSettings] = await main.findSettingsAddress();
+
+    await program.rpc.unsynthesize(
+        mint.publicKey,
+        tx_id,
         new BN(amount),
-        // bumpPDAMaster,
-        chainToAddress,
+        {
+            accounts: {
+              settings: pubSettings,
+                unsynthesizeState: unsynthesizeState,
+                statesMasterAccount: statesMasterAccount.publicKey,
+                sourceAccount,
+                destinationAccount,
+                ownerAccount: owner.publicKey,
+                splTokenAccount: TOKEN_PROGRAM_ID,
+                rent: web3.SYSVAR_RENT_PUBKEY,
+                systemProgram: web3.SystemProgram.programId,
+                bridge: factory.pidBridge, // progBridge.programId, // bridge.publicKey,
+            },
+            signers: [
+              statesMasterAccount,
+              // bridge,
+            ],
+        }
+    )
+
+    let unsynthesizeStateInfo = await provider.connection.getAccountInfo(unsynthesizeState);
+    assert.ok(unsynthesizeStateInfo.data[0] == 1)
+
+    let receiveSide = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    let oppositeBridge = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    let chainId = 14
+    let nonceMasterAccount = new web3.Account();
+    await provider.connection.confirmTransaction(
+        await provider.connection.requestAirdrop(nonceMasterAccount.publicKey, 10000000000),
+        'confirmed'
+    );
+
+    const bridgeNonce = await web3.PublicKey.createWithSeed(
+        nonceMasterAccount.publicKey,
+        oppositeBridge.toString(),
+        factory.pidMain, // program.programId
+    )
+
+    await program.rpc.emergencyUnburnRequest(
+        tx_id,
         receiveSide,
         oppositeBridge,
         new BN(chainId),
-        token.publicKey,
-        accUser.publicKey,
-        pubSource,
-      );
-
-      const pubDestination = await main.getAssociatedTokenAddress(
-        token.publicKey,
-      );
-      let isDestinationInitialized = false;
-      // (await token.getAccountInfo(pubDestination)).isInitialized
-      const tx1 = new web3.Transaction();
-      if ( !isDestinationInitialized ) {
-        tx1.add(
-          Token.createAssociatedTokenAccountInstruction(
-            token.associatedProgramId,
-            token.programId,
-            token.publicKey,
-            pubDestination,
-            pubPDAMaster,
-            accUser.publicKey,
-          ),
-        );
-      }
-      tx1.add(ixSynthesize);
-      await helper.sendAndConfirmTransaction(PORTAL_SYNTHESIZE, tx1, accUser);
-
-      logger.log('synthesizeRequestAccount');
-      logger.log(await main.fetchSynthesizeRequestAccountInfo(
-        token.publicKey,
-      ));
-
-      logger.log('fetch pubSynthesizeRequest');
-      const dataSynthesizeRequest = await main.fetchSynthesizeRequest(
-        token.publicKey,
-      );
-      logger.log(dataSynthesizeRequest);
-
-      const dataDestination = await token.getAccountInfo(pubDestination);
-      logger.log(dataDestination);
-
-      logger.log('emergencyUnsynthesize');
-      const ixEmergencyUnsynthesize = await main.emergencyUnsynthesize(
-        token.publicKey,
-        accUser.publicKey,
-        pubSource,
-      );
-      const tx2 = new web3.Transaction();
-      tx2.add(ixEmergencyUnsynthesize);
-      await helper.sendAndConfirmTransaction('send emergencyUnsynthesize', tx2, accUser);
-
-      logger.log('synthesizeRequestAccount');
-      logger.log(await main.fetchSynthesizeRequestAccountInfo(
-        token.publicKey,
-      ));
-
-      // assert.ok(synthesizeRequestAccount.data.slice(120, 128)[0] == 2)
-    });
-
-    it.skip('Portal unsynthesize', async () => {
-
-        let tx_id = "1234";
-        let owner = provider.wallet;
-        let mint = await createMint(provider);
-        let statesMasterAccount = new web3.Account();
-        await provider.connection.confirmTransaction(
-            await provider.connection.requestAirdrop(statesMasterAccount.publicKey, 10000000000),
-            "confirmed"
-        );
-
-        const unsynthesizeState = await web3.PublicKey.createWithSeed(
-            statesMasterAccount.publicKey,
-            tx_id,
-            program.programId
-        )
-
-        let amount = 10;
-        let minted = 1000;
-        let sourceAccount = await createTokenAccount(provider, mint, provider.wallet.publicKey);
-        await mintToAccount(provider, mint, sourceAccount, minted, owner.publicKey)
-
-        let destinationAccount = await createTokenAccount(provider, mint, provider.wallet.publicKey);
-        // let splTokenKey = new anchor.web3.PublicKey(
-        //     TokenInstructions.TOKEN_PROGRAM_ID.toString()
-        // );
-
-        const [pubSettings, bumpSettings] = await main.findSettingsAddress();
-
-        await program.rpc.unsynthesize(
-            mint.publicKey,
-            tx_id,
-            new BN(amount),
-            {
-                accounts: {
-                  settings: pubSettings,
-                    unsynthesizeState: unsynthesizeState,
-                    statesMasterAccount: statesMasterAccount.publicKey,
-                    sourceAccount,
-                    destinationAccount,
-                    ownerAccount: owner.publicKey,
-                    splTokenAccount: TOKEN_PROGRAM_ID,
-                    rent: web3.SYSVAR_RENT_PUBKEY,
-                    systemProgram: web3.SystemProgram.programId,
-                    bridge: factory.pidBridge, // progBridge.programId, // bridge.publicKey,
-                },
-                signers: [
-                  statesMasterAccount,
-                  // bridge,
-                ],
-            }
-        )
-
-        let unsynthesizeStateInfo = await provider.connection.getAccountInfo(unsynthesizeState);
-        assert.ok(unsynthesizeStateInfo.data[0] == 1)
-
-        let receiveSide = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-        let oppositeBridge = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-        let chainId = 14
-        let nonceMasterAccount = new web3.Account();
-        await provider.connection.confirmTransaction(
-            await provider.connection.requestAirdrop(nonceMasterAccount.publicKey, 10000000000),
-            "confirmed"
-        );
-
-        const bridgeNonce = await web3.PublicKey.createWithSeed(
-            nonceMasterAccount.publicKey,
-            oppositeBridge.toString(),
-            factory.pidMain, // program.programId
-        )
-
-        await program.rpc.emergencyUnburnRequest(
-            tx_id,
-            receiveSide,
-            oppositeBridge,
-            new BN(chainId),
-            {
-                accounts: {
-                    unsynthesizeState: unsynthesizeState,
-                    statesMasterAccount: statesMasterAccount.publicKey,
-                    nonceMasterAccount: nonceMasterAccount.publicKey,
-                    bridgeNonce,
-                    messageSender: owner.publicKey,
-                    rent: web3.SYSVAR_RENT_PUBKEY,
-                    systemProgram: web3.SystemProgram.programId,
-                },
-                signers: [nonceMasterAccount, statesMasterAccount]
+        {
+            accounts: {
+                unsynthesizeState: unsynthesizeState,
+                statesMasterAccount: statesMasterAccount.publicKey,
+                nonceMasterAccount: nonceMasterAccount.publicKey,
+                bridgeNonce,
+                messageSender: owner.publicKey,
+                rent: web3.SYSVAR_RENT_PUBKEY,
+                systemProgram: web3.SystemProgram.programId,
             },
-        )
-    });
+            signers: [nonceMasterAccount, statesMasterAccount]
+        },
+    )
+    */
+  });
 });
 
 /*

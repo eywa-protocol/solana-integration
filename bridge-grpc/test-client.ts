@@ -2,8 +2,6 @@ import path from "path";
 
 import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
-// import { idlAddress } from "@project-serum/anchor/dist/idl";
-// import { toNamespacedPath } from "path/posix";
 
 const PROTO_PATH = path.resolve(__dirname, "proto", "helloworld.proto");
 
@@ -72,8 +70,6 @@ function main() {
   });
 
   const call = client.sayHello2({ name: user });
-
-  // console.log(call);
 
   call.on("data", function (response) {
     console.log("response:", response);

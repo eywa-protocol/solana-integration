@@ -15,8 +15,10 @@ var jspb = require('google-protobuf');
 var goog = jspb;
 var global = Function('return this')();
 
-goog.exportSymbol('proto.eywa_solana_grpc.Empty', null, global);
+var google_protobuf_empty_pb = require('google-protobuf/google/protobuf/empty_pb.js');
+goog.object.extend(proto, google_protobuf_empty_pb);
 goog.exportSymbol('proto.eywa_solana_grpc.OracleRequest', null, global);
+goog.exportSymbol('proto.eywa_solana_grpc.SlotInfo', null, global);
 goog.exportSymbol('proto.eywa_solana_grpc.uinteger160', null, global);
 goog.exportSymbol('proto.eywa_solana_grpc.uinteger256', null, global);
 /**
@@ -92,16 +94,16 @@ if (goog.DEBUG && !COMPILED) {
  * @extends {jspb.Message}
  * @constructor
  */
-proto.eywa_solana_grpc.Empty = function(opt_data) {
+proto.eywa_solana_grpc.SlotInfo = function(opt_data) {
   jspb.Message.initialize(this, opt_data, 0, -1, null, null);
 };
-goog.inherits(proto.eywa_solana_grpc.Empty, jspb.Message);
+goog.inherits(proto.eywa_solana_grpc.SlotInfo, jspb.Message);
 if (goog.DEBUG && !COMPILED) {
   /**
    * @public
    * @override
    */
-  proto.eywa_solana_grpc.Empty.displayName = 'proto.eywa_solana_grpc.Empty';
+  proto.eywa_solana_grpc.SlotInfo.displayName = 'proto.eywa_solana_grpc.SlotInfo';
 }
 
 
@@ -135,10 +137,7 @@ proto.eywa_solana_grpc.uinteger256.prototype.toObject = function(opt_includeInst
  */
 proto.eywa_solana_grpc.uinteger256.toObject = function(includeInstance, msg) {
   var f, obj = {
-    id0: jspb.Message.getFieldWithDefault(msg, 1, 0),
-    id1: jspb.Message.getFieldWithDefault(msg, 2, 0),
-    id2: jspb.Message.getFieldWithDefault(msg, 3, 0),
-    id3: jspb.Message.getFieldWithDefault(msg, 4, 0)
+    value: msg.getValue_asB64()
   };
 
   if (includeInstance) {
@@ -176,20 +175,8 @@ proto.eywa_solana_grpc.uinteger256.deserializeBinaryFromReader = function(msg, r
     var field = reader.getFieldNumber();
     switch (field) {
     case 1:
-      var value = /** @type {number} */ (reader.readFixed64());
-      msg.setId0(value);
-      break;
-    case 2:
-      var value = /** @type {number} */ (reader.readFixed64());
-      msg.setId1(value);
-      break;
-    case 3:
-      var value = /** @type {number} */ (reader.readFixed64());
-      msg.setId2(value);
-      break;
-    case 4:
-      var value = /** @type {number} */ (reader.readFixed64());
-      msg.setId3(value);
+      var value = /** @type {!Uint8Array} */ (reader.readBytes());
+      msg.setValue(value);
       break;
     default:
       reader.skipField();
@@ -220,106 +207,55 @@ proto.eywa_solana_grpc.uinteger256.prototype.serializeBinary = function() {
  */
 proto.eywa_solana_grpc.uinteger256.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
-  f = message.getId0();
-  if (f !== 0) {
-    writer.writeFixed64(
+  f = message.getValue_asU8();
+  if (f.length > 0) {
+    writer.writeBytes(
       1,
       f
     );
   }
-  f = message.getId1();
-  if (f !== 0) {
-    writer.writeFixed64(
-      2,
-      f
-    );
-  }
-  f = message.getId2();
-  if (f !== 0) {
-    writer.writeFixed64(
-      3,
-      f
-    );
-  }
-  f = message.getId3();
-  if (f !== 0) {
-    writer.writeFixed64(
-      4,
-      f
-    );
-  }
 };
 
 
 /**
- * optional fixed64 id_0 = 1;
- * @return {number}
+ * optional bytes value = 1;
+ * @return {!(string|Uint8Array)}
  */
-proto.eywa_solana_grpc.uinteger256.prototype.getId0 = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 1, 0));
+proto.eywa_solana_grpc.uinteger256.prototype.getValue = function() {
+  return /** @type {!(string|Uint8Array)} */ (jspb.Message.getFieldWithDefault(this, 1, ""));
 };
 
 
 /**
- * @param {number} value
+ * optional bytes value = 1;
+ * This is a type-conversion wrapper around `getValue()`
+ * @return {string}
+ */
+proto.eywa_solana_grpc.uinteger256.prototype.getValue_asB64 = function() {
+  return /** @type {string} */ (jspb.Message.bytesAsB64(
+      this.getValue()));
+};
+
+
+/**
+ * optional bytes value = 1;
+ * Note that Uint8Array is not supported on all browsers.
+ * @see http://caniuse.com/Uint8Array
+ * This is a type-conversion wrapper around `getValue()`
+ * @return {!Uint8Array}
+ */
+proto.eywa_solana_grpc.uinteger256.prototype.getValue_asU8 = function() {
+  return /** @type {!Uint8Array} */ (jspb.Message.bytesAsU8(
+      this.getValue()));
+};
+
+
+/**
+ * @param {!(string|Uint8Array)} value
  * @return {!proto.eywa_solana_grpc.uinteger256} returns this
  */
-proto.eywa_solana_grpc.uinteger256.prototype.setId0 = function(value) {
-  return jspb.Message.setProto3IntField(this, 1, value);
-};
-
-
-/**
- * optional fixed64 id_1 = 2;
- * @return {number}
- */
-proto.eywa_solana_grpc.uinteger256.prototype.getId1 = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 2, 0));
-};
-
-
-/**
- * @param {number} value
- * @return {!proto.eywa_solana_grpc.uinteger256} returns this
- */
-proto.eywa_solana_grpc.uinteger256.prototype.setId1 = function(value) {
-  return jspb.Message.setProto3IntField(this, 2, value);
-};
-
-
-/**
- * optional fixed64 id_2 = 3;
- * @return {number}
- */
-proto.eywa_solana_grpc.uinteger256.prototype.getId2 = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
-};
-
-
-/**
- * @param {number} value
- * @return {!proto.eywa_solana_grpc.uinteger256} returns this
- */
-proto.eywa_solana_grpc.uinteger256.prototype.setId2 = function(value) {
-  return jspb.Message.setProto3IntField(this, 3, value);
-};
-
-
-/**
- * optional fixed64 id_3 = 4;
- * @return {number}
- */
-proto.eywa_solana_grpc.uinteger256.prototype.getId3 = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 4, 0));
-};
-
-
-/**
- * @param {number} value
- * @return {!proto.eywa_solana_grpc.uinteger256} returns this
- */
-proto.eywa_solana_grpc.uinteger256.prototype.setId3 = function(value) {
-  return jspb.Message.setProto3IntField(this, 4, value);
+proto.eywa_solana_grpc.uinteger256.prototype.setValue = function(value) {
+  return jspb.Message.setProto3BytesField(this, 1, value);
 };
 
 
@@ -355,9 +291,7 @@ proto.eywa_solana_grpc.uinteger160.prototype.toObject = function(opt_includeInst
  */
 proto.eywa_solana_grpc.uinteger160.toObject = function(includeInstance, msg) {
   var f, obj = {
-    id0: jspb.Message.getFieldWithDefault(msg, 1, 0),
-    id1: jspb.Message.getFieldWithDefault(msg, 2, 0),
-    id2: jspb.Message.getFieldWithDefault(msg, 3, 0)
+    value: msg.getValue_asB64()
   };
 
   if (includeInstance) {
@@ -395,16 +329,8 @@ proto.eywa_solana_grpc.uinteger160.deserializeBinaryFromReader = function(msg, r
     var field = reader.getFieldNumber();
     switch (field) {
     case 1:
-      var value = /** @type {number} */ (reader.readFixed64());
-      msg.setId0(value);
-      break;
-    case 2:
-      var value = /** @type {number} */ (reader.readFixed64());
-      msg.setId1(value);
-      break;
-    case 3:
-      var value = /** @type {number} */ (reader.readFixed32());
-      msg.setId2(value);
+      var value = /** @type {!Uint8Array} */ (reader.readBytes());
+      msg.setValue(value);
       break;
     default:
       reader.skipField();
@@ -435,81 +361,55 @@ proto.eywa_solana_grpc.uinteger160.prototype.serializeBinary = function() {
  */
 proto.eywa_solana_grpc.uinteger160.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
-  f = message.getId0();
-  if (f !== 0) {
-    writer.writeFixed64(
+  f = message.getValue_asU8();
+  if (f.length > 0) {
+    writer.writeBytes(
       1,
       f
     );
   }
-  f = message.getId1();
-  if (f !== 0) {
-    writer.writeFixed64(
-      2,
-      f
-    );
-  }
-  f = message.getId2();
-  if (f !== 0) {
-    writer.writeFixed32(
-      3,
-      f
-    );
-  }
 };
 
 
 /**
- * optional fixed64 id_0 = 1;
- * @return {number}
+ * optional bytes value = 1;
+ * @return {!(string|Uint8Array)}
  */
-proto.eywa_solana_grpc.uinteger160.prototype.getId0 = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 1, 0));
+proto.eywa_solana_grpc.uinteger160.prototype.getValue = function() {
+  return /** @type {!(string|Uint8Array)} */ (jspb.Message.getFieldWithDefault(this, 1, ""));
 };
 
 
 /**
- * @param {number} value
+ * optional bytes value = 1;
+ * This is a type-conversion wrapper around `getValue()`
+ * @return {string}
+ */
+proto.eywa_solana_grpc.uinteger160.prototype.getValue_asB64 = function() {
+  return /** @type {string} */ (jspb.Message.bytesAsB64(
+      this.getValue()));
+};
+
+
+/**
+ * optional bytes value = 1;
+ * Note that Uint8Array is not supported on all browsers.
+ * @see http://caniuse.com/Uint8Array
+ * This is a type-conversion wrapper around `getValue()`
+ * @return {!Uint8Array}
+ */
+proto.eywa_solana_grpc.uinteger160.prototype.getValue_asU8 = function() {
+  return /** @type {!Uint8Array} */ (jspb.Message.bytesAsU8(
+      this.getValue()));
+};
+
+
+/**
+ * @param {!(string|Uint8Array)} value
  * @return {!proto.eywa_solana_grpc.uinteger160} returns this
  */
-proto.eywa_solana_grpc.uinteger160.prototype.setId0 = function(value) {
-  return jspb.Message.setProto3IntField(this, 1, value);
-};
-
-
-/**
- * optional fixed64 id_1 = 2;
- * @return {number}
- */
-proto.eywa_solana_grpc.uinteger160.prototype.getId1 = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 2, 0));
-};
-
-
-/**
- * @param {number} value
- * @return {!proto.eywa_solana_grpc.uinteger160} returns this
- */
-proto.eywa_solana_grpc.uinteger160.prototype.setId1 = function(value) {
-  return jspb.Message.setProto3IntField(this, 2, value);
-};
-
-
-/**
- * optional fixed32 id_2 = 3;
- * @return {number}
- */
-proto.eywa_solana_grpc.uinteger160.prototype.getId2 = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
-};
-
-
-/**
- * @param {number} value
- * @return {!proto.eywa_solana_grpc.uinteger160} returns this
- */
-proto.eywa_solana_grpc.uinteger160.prototype.setId2 = function(value) {
-  return jspb.Message.setProto3IntField(this, 3, value);
+proto.eywa_solana_grpc.uinteger160.prototype.setValue = function(value) {
+  return jspb.Message.setProto3BytesField(this, 1, value);
 };
 
 
@@ -549,8 +449,8 @@ proto.eywa_solana_grpc.OracleRequest.toObject = function(includeInstance, msg) {
     bridge: (f = msg.getBridge()) && proto.eywa_solana_grpc.uinteger256.toObject(includeInstance, f),
     requestId: (f = msg.getRequestId()) && proto.eywa_solana_grpc.uinteger256.toObject(includeInstance, f),
     selector: msg.getSelector_asB64(),
-    receiveSide: jspb.Message.getFieldWithDefault(msg, 5, ""),
-    oppositeBridge: jspb.Message.getFieldWithDefault(msg, 6, ""),
+    receiveSide: (f = msg.getReceiveSide()) && proto.eywa_solana_grpc.uinteger160.toObject(includeInstance, f),
+    oppositeBridge: (f = msg.getOppositeBridge()) && proto.eywa_solana_grpc.uinteger160.toObject(includeInstance, f),
     chainid: jspb.Message.getFieldWithDefault(msg, 7, 0)
   };
 
@@ -607,11 +507,13 @@ proto.eywa_solana_grpc.OracleRequest.deserializeBinaryFromReader = function(msg,
       msg.setSelector(value);
       break;
     case 5:
-      var value = /** @type {string} */ (reader.readString());
+      var value = new proto.eywa_solana_grpc.uinteger160;
+      reader.readMessage(value,proto.eywa_solana_grpc.uinteger160.deserializeBinaryFromReader);
       msg.setReceiveSide(value);
       break;
     case 6:
-      var value = /** @type {string} */ (reader.readString());
+      var value = new proto.eywa_solana_grpc.uinteger160;
+      reader.readMessage(value,proto.eywa_solana_grpc.uinteger160.deserializeBinaryFromReader);
       msg.setOppositeBridge(value);
       break;
     case 7:
@@ -678,17 +580,19 @@ proto.eywa_solana_grpc.OracleRequest.serializeBinaryToWriter = function(message,
     );
   }
   f = message.getReceiveSide();
-  if (f.length > 0) {
-    writer.writeString(
+  if (f != null) {
+    writer.writeMessage(
       5,
-      f
+      f,
+      proto.eywa_solana_grpc.uinteger160.serializeBinaryToWriter
     );
   }
   f = message.getOppositeBridge();
-  if (f.length > 0) {
-    writer.writeString(
+  if (f != null) {
+    writer.writeMessage(
       6,
-      f
+      f,
+      proto.eywa_solana_grpc.uinteger160.serializeBinaryToWriter
     );
   }
   f = message.getChainid();
@@ -836,38 +740,76 @@ proto.eywa_solana_grpc.OracleRequest.prototype.setSelector = function(value) {
 
 
 /**
- * optional string receive_side = 5;
- * @return {string}
+ * optional uinteger160 receive_side = 5;
+ * @return {?proto.eywa_solana_grpc.uinteger160}
  */
 proto.eywa_solana_grpc.OracleRequest.prototype.getReceiveSide = function() {
-  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 5, ""));
+  return /** @type{?proto.eywa_solana_grpc.uinteger160} */ (
+    jspb.Message.getWrapperField(this, proto.eywa_solana_grpc.uinteger160, 5));
 };
 
 
 /**
- * @param {string} value
+ * @param {?proto.eywa_solana_grpc.uinteger160|undefined} value
+ * @return {!proto.eywa_solana_grpc.OracleRequest} returns this
+*/
+proto.eywa_solana_grpc.OracleRequest.prototype.setReceiveSide = function(value) {
+  return jspb.Message.setWrapperField(this, 5, value);
+};
+
+
+/**
+ * Clears the message field making it undefined.
  * @return {!proto.eywa_solana_grpc.OracleRequest} returns this
  */
-proto.eywa_solana_grpc.OracleRequest.prototype.setReceiveSide = function(value) {
-  return jspb.Message.setProto3StringField(this, 5, value);
+proto.eywa_solana_grpc.OracleRequest.prototype.clearReceiveSide = function() {
+  return this.setReceiveSide(undefined);
 };
 
 
 /**
- * optional string opposite_bridge = 6;
- * @return {string}
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.eywa_solana_grpc.OracleRequest.prototype.hasReceiveSide = function() {
+  return jspb.Message.getField(this, 5) != null;
+};
+
+
+/**
+ * optional uinteger160 opposite_bridge = 6;
+ * @return {?proto.eywa_solana_grpc.uinteger160}
  */
 proto.eywa_solana_grpc.OracleRequest.prototype.getOppositeBridge = function() {
-  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 6, ""));
+  return /** @type{?proto.eywa_solana_grpc.uinteger160} */ (
+    jspb.Message.getWrapperField(this, proto.eywa_solana_grpc.uinteger160, 6));
 };
 
 
 /**
- * @param {string} value
+ * @param {?proto.eywa_solana_grpc.uinteger160|undefined} value
+ * @return {!proto.eywa_solana_grpc.OracleRequest} returns this
+*/
+proto.eywa_solana_grpc.OracleRequest.prototype.setOppositeBridge = function(value) {
+  return jspb.Message.setWrapperField(this, 6, value);
+};
+
+
+/**
+ * Clears the message field making it undefined.
  * @return {!proto.eywa_solana_grpc.OracleRequest} returns this
  */
-proto.eywa_solana_grpc.OracleRequest.prototype.setOppositeBridge = function(value) {
-  return jspb.Message.setProto3StringField(this, 6, value);
+proto.eywa_solana_grpc.OracleRequest.prototype.clearOppositeBridge = function() {
+  return this.setOppositeBridge(undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.eywa_solana_grpc.OracleRequest.prototype.hasOppositeBridge = function() {
+  return jspb.Message.getField(this, 6) != null;
 };
 
 
@@ -905,8 +847,8 @@ if (jspb.Message.GENERATE_TO_OBJECT) {
  *     http://goto/soy-param-migration
  * @return {!Object}
  */
-proto.eywa_solana_grpc.Empty.prototype.toObject = function(opt_includeInstance) {
-  return proto.eywa_solana_grpc.Empty.toObject(opt_includeInstance, this);
+proto.eywa_solana_grpc.SlotInfo.prototype.toObject = function(opt_includeInstance) {
+  return proto.eywa_solana_grpc.SlotInfo.toObject(opt_includeInstance, this);
 };
 
 
@@ -915,13 +857,15 @@ proto.eywa_solana_grpc.Empty.prototype.toObject = function(opt_includeInstance) 
  * @param {boolean|undefined} includeInstance Deprecated. Whether to include
  *     the JSPB instance for transitional soy proto support:
  *     http://goto/soy-param-migration
- * @param {!proto.eywa_solana_grpc.Empty} msg The msg instance to transform.
+ * @param {!proto.eywa_solana_grpc.SlotInfo} msg The msg instance to transform.
  * @return {!Object}
  * @suppress {unusedLocalVariables} f is only used for nested messages
  */
-proto.eywa_solana_grpc.Empty.toObject = function(includeInstance, msg) {
+proto.eywa_solana_grpc.SlotInfo.toObject = function(includeInstance, msg) {
   var f, obj = {
-
+    slot: jspb.Message.getFieldWithDefault(msg, 1, 0),
+    parent: jspb.Message.getFieldWithDefault(msg, 2, 0),
+    root: jspb.Message.getFieldWithDefault(msg, 3, 0)
   };
 
   if (includeInstance) {
@@ -935,29 +879,41 @@ proto.eywa_solana_grpc.Empty.toObject = function(includeInstance, msg) {
 /**
  * Deserializes binary data (in protobuf wire format).
  * @param {jspb.ByteSource} bytes The bytes to deserialize.
- * @return {!proto.eywa_solana_grpc.Empty}
+ * @return {!proto.eywa_solana_grpc.SlotInfo}
  */
-proto.eywa_solana_grpc.Empty.deserializeBinary = function(bytes) {
+proto.eywa_solana_grpc.SlotInfo.deserializeBinary = function(bytes) {
   var reader = new jspb.BinaryReader(bytes);
-  var msg = new proto.eywa_solana_grpc.Empty;
-  return proto.eywa_solana_grpc.Empty.deserializeBinaryFromReader(msg, reader);
+  var msg = new proto.eywa_solana_grpc.SlotInfo;
+  return proto.eywa_solana_grpc.SlotInfo.deserializeBinaryFromReader(msg, reader);
 };
 
 
 /**
  * Deserializes binary data (in protobuf wire format) from the
  * given reader into the given message object.
- * @param {!proto.eywa_solana_grpc.Empty} msg The message object to deserialize into.
+ * @param {!proto.eywa_solana_grpc.SlotInfo} msg The message object to deserialize into.
  * @param {!jspb.BinaryReader} reader The BinaryReader to use.
- * @return {!proto.eywa_solana_grpc.Empty}
+ * @return {!proto.eywa_solana_grpc.SlotInfo}
  */
-proto.eywa_solana_grpc.Empty.deserializeBinaryFromReader = function(msg, reader) {
+proto.eywa_solana_grpc.SlotInfo.deserializeBinaryFromReader = function(msg, reader) {
   while (reader.nextField()) {
     if (reader.isEndGroup()) {
       break;
     }
     var field = reader.getFieldNumber();
     switch (field) {
+    case 1:
+      var value = /** @type {number} */ (reader.readFixed64());
+      msg.setSlot(value);
+      break;
+    case 2:
+      var value = /** @type {number} */ (reader.readFixed64());
+      msg.setParent(value);
+      break;
+    case 3:
+      var value = /** @type {number} */ (reader.readFixed64());
+      msg.setRoot(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -971,9 +927,9 @@ proto.eywa_solana_grpc.Empty.deserializeBinaryFromReader = function(msg, reader)
  * Serializes the message to binary data (in protobuf wire format).
  * @return {!Uint8Array}
  */
-proto.eywa_solana_grpc.Empty.prototype.serializeBinary = function() {
+proto.eywa_solana_grpc.SlotInfo.prototype.serializeBinary = function() {
   var writer = new jspb.BinaryWriter();
-  proto.eywa_solana_grpc.Empty.serializeBinaryToWriter(this, writer);
+  proto.eywa_solana_grpc.SlotInfo.serializeBinaryToWriter(this, writer);
   return writer.getResultBuffer();
 };
 
@@ -981,12 +937,87 @@ proto.eywa_solana_grpc.Empty.prototype.serializeBinary = function() {
 /**
  * Serializes the given message to binary data (in protobuf wire
  * format), writing to the given BinaryWriter.
- * @param {!proto.eywa_solana_grpc.Empty} message
+ * @param {!proto.eywa_solana_grpc.SlotInfo} message
  * @param {!jspb.BinaryWriter} writer
  * @suppress {unusedLocalVariables} f is only used for nested messages
  */
-proto.eywa_solana_grpc.Empty.serializeBinaryToWriter = function(message, writer) {
+proto.eywa_solana_grpc.SlotInfo.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
+  f = message.getSlot();
+  if (f !== 0) {
+    writer.writeFixed64(
+      1,
+      f
+    );
+  }
+  f = message.getParent();
+  if (f !== 0) {
+    writer.writeFixed64(
+      2,
+      f
+    );
+  }
+  f = message.getRoot();
+  if (f !== 0) {
+    writer.writeFixed64(
+      3,
+      f
+    );
+  }
+};
+
+
+/**
+ * optional fixed64 slot = 1;
+ * @return {number}
+ */
+proto.eywa_solana_grpc.SlotInfo.prototype.getSlot = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 1, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.eywa_solana_grpc.SlotInfo} returns this
+ */
+proto.eywa_solana_grpc.SlotInfo.prototype.setSlot = function(value) {
+  return jspb.Message.setProto3IntField(this, 1, value);
+};
+
+
+/**
+ * optional fixed64 parent = 2;
+ * @return {number}
+ */
+proto.eywa_solana_grpc.SlotInfo.prototype.getParent = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 2, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.eywa_solana_grpc.SlotInfo} returns this
+ */
+proto.eywa_solana_grpc.SlotInfo.prototype.setParent = function(value) {
+  return jspb.Message.setProto3IntField(this, 2, value);
+};
+
+
+/**
+ * optional fixed64 root = 3;
+ * @return {number}
+ */
+proto.eywa_solana_grpc.SlotInfo.prototype.getRoot = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.eywa_solana_grpc.SlotInfo} returns this
+ */
+proto.eywa_solana_grpc.SlotInfo.prototype.setRoot = function(value) {
+  return jspb.Message.setProto3IntField(this, 3, value);
 };
 
 

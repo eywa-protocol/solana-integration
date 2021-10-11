@@ -21,6 +21,10 @@ export abstract class Base {
     // this.logger.logPublicKey('pidBridge', pidBridge);
   }
 
+  public get pid() {
+    return this.program.programId;
+  }
+
   public async findProgramAddress(
     seeds: (Uint8Array | Buffer)[]
   ): Promise<[web3.PublicKey, number]> {

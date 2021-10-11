@@ -5,16 +5,13 @@
 /* eslint-disable */
 
 import * as jspb from "google-protobuf";
+import * as google_protobuf_empty_pb from "google-protobuf/google/protobuf/empty_pb";
 
 export class uinteger256 extends jspb.Message { 
-    getId0(): number;
-    setId0(value: number): uinteger256;
-    getId1(): number;
-    setId1(value: number): uinteger256;
-    getId2(): number;
-    setId2(value: number): uinteger256;
-    getId3(): number;
-    setId3(value: number): uinteger256;
+    getValue(): Uint8Array | string;
+    getValue_asU8(): Uint8Array;
+    getValue_asB64(): string;
+    setValue(value: Uint8Array | string): uinteger256;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): uinteger256.AsObject;
@@ -28,20 +25,15 @@ export class uinteger256 extends jspb.Message {
 
 export namespace uinteger256 {
     export type AsObject = {
-        id0: number,
-        id1: number,
-        id2: number,
-        id3: number,
+        value: Uint8Array | string,
     }
 }
 
 export class uinteger160 extends jspb.Message { 
-    getId0(): number;
-    setId0(value: number): uinteger160;
-    getId1(): number;
-    setId1(value: number): uinteger160;
-    getId2(): number;
-    setId2(value: number): uinteger160;
+    getValue(): Uint8Array | string;
+    getValue_asU8(): Uint8Array;
+    getValue_asB64(): string;
+    setValue(value: Uint8Array | string): uinteger160;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): uinteger160.AsObject;
@@ -55,9 +47,7 @@ export class uinteger160 extends jspb.Message {
 
 export namespace uinteger160 {
     export type AsObject = {
-        id0: number,
-        id1: number,
-        id2: number,
+        value: Uint8Array | string,
     }
 }
 
@@ -78,10 +68,16 @@ export class OracleRequest extends jspb.Message {
     getSelector_asU8(): Uint8Array;
     getSelector_asB64(): string;
     setSelector(value: Uint8Array | string): OracleRequest;
-    getReceiveSide(): string;
-    setReceiveSide(value: string): OracleRequest;
-    getOppositeBridge(): string;
-    setOppositeBridge(value: string): OracleRequest;
+
+    hasReceiveSide(): boolean;
+    clearReceiveSide(): void;
+    getReceiveSide(): uinteger160 | undefined;
+    setReceiveSide(value?: uinteger160): OracleRequest;
+
+    hasOppositeBridge(): boolean;
+    clearOppositeBridge(): void;
+    getOppositeBridge(): uinteger160 | undefined;
+    setOppositeBridge(value?: uinteger160): OracleRequest;
     getChainid(): number;
     setChainid(value: number): OracleRequest;
 
@@ -101,25 +97,34 @@ export namespace OracleRequest {
         bridge?: uinteger256.AsObject,
         requestId?: uinteger256.AsObject,
         selector: Uint8Array | string,
-        receiveSide: string,
-        oppositeBridge: string,
+        receiveSide?: uinteger160.AsObject,
+        oppositeBridge?: uinteger160.AsObject,
         chainid: number,
     }
 }
 
-export class Empty extends jspb.Message { 
+export class SlotInfo extends jspb.Message { 
+    getSlot(): number;
+    setSlot(value: number): SlotInfo;
+    getParent(): number;
+    setParent(value: number): SlotInfo;
+    getRoot(): number;
+    setRoot(value: number): SlotInfo;
 
     serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): Empty.AsObject;
-    static toObject(includeInstance: boolean, msg: Empty): Empty.AsObject;
+    toObject(includeInstance?: boolean): SlotInfo.AsObject;
+    static toObject(includeInstance: boolean, msg: SlotInfo): SlotInfo.AsObject;
     static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
     static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: Empty, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): Empty;
-    static deserializeBinaryFromReader(message: Empty, reader: jspb.BinaryReader): Empty;
+    static serializeBinaryToWriter(message: SlotInfo, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): SlotInfo;
+    static deserializeBinaryFromReader(message: SlotInfo, reader: jspb.BinaryReader): SlotInfo;
 }
 
-export namespace Empty {
+export namespace SlotInfo {
     export type AsObject = {
+        slot: number,
+        parent: number,
+        root: number,
     }
 }

@@ -24,6 +24,24 @@ export class BridgeUserClient {
 
   // checkContractEvent
 
+  // кошелек Phantom
+
+  /*
+    1. Нужна возможность получаться всю инфу о токене
+    2. Synthesize
+    3. unSynthesize
+    4. representationSynt
+    5. representationReal
+    6. getListRepresentation
+
+    const owner = web3.PublicKey.default;
+    const filter: web3.TokenAccountsFilter = {
+      programId: web3.PublicKey.default,
+      // mint: web3.PublicKey.default,
+    };
+    this.connection.getTokenAccountsByOwner(owner, filter);
+  */
+
   public async createPortalSynthesizeInstruction(
     amount: BN,
     chainToAddress: Uint8Array | Buffer, // [u8; 20],

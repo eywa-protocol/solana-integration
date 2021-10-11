@@ -250,6 +250,52 @@
       ]
     },
     {
+      "name": "createRepresentationRequest",
+      "accounts": [
+        {
+          "name": "settings",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "realToken",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "associated",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "associatedTokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "synthesize",
       "accounts": [
         {
@@ -849,6 +895,26 @@
             ]
           },
           "index": false
+        }
+      ]
+    },
+    {
+      "name": "RepresentationRequest",
+      "fields": [
+        {
+          "name": "rtoken",
+          "type": "publicKey",
+          "index": true
+        }
+      ]
+    },
+    {
+      "name": "ApprovedRepresentationRequest",
+      "fields": [
+        {
+          "name": "rtoken",
+          "type": "publicKey",
+          "index": true
         }
       ]
     },

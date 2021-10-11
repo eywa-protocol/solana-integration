@@ -22,6 +22,7 @@ anchor-lang = "=0.16.1"
 anchor-spl = "=0.16.1"
 solana-program = "=1.7.11"
 spl-token = { version = "=3.2.0", features = ["no-entrypoint"] }
+spl-associated-token-account = { version = "1.0.3", features = ["no-entrypoint"] }
 
 [dev-dependencies]
 solana-program-test = "=1.7.11"

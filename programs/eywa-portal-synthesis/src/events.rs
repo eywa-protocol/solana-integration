@@ -80,6 +80,28 @@ pub struct RevertBurnCompleted {
 // #region Portal
 
 /*
+    event RepresentationRequest(
+        address indexed _rtoken
+    );
+*/
+#[event]
+pub struct RepresentationRequest {
+    #[index]
+    pub rtoken: Pubkey,
+}
+
+/*
+    event ApprovedRepresentationRequest(
+        address indexed _rtoken
+    );
+*/
+#[event]
+pub struct ApprovedRepresentationRequest {
+    #[index]
+    pub rtoken: Pubkey,
+}
+
+/*
     event SynthesizeRequest(
         bytes32 indexed _id,
         address indexed _from,

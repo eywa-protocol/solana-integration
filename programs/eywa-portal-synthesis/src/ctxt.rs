@@ -152,6 +152,43 @@ pub struct EmergencyUnburn<'info> {
 }
 
 #[derive(Accounts)]
+pub struct CreateRepresentationRequest<'info> {
+    #[account(
+        mut,
+        seeds = [ PDA_MASTER_SEED.as_ref() ],
+        bump = settings.bump
+    )]
+    pub settings: Account<'info, Settings>,
+    // #[account(
+    //     init,
+    //     seeds = [b"my-mint-seed".as_ref()],
+    //     bump = mint_bump,
+    //     payer = authority,
+    //     mint::decimals = 6,
+    //     mint::authority = authority
+    // )]
+    // pub mint: Account<'info, Mint>,
+    pub real_token: Account<'info, anchor_spl::token::Mint>,
+    // #[account(
+    //     init,
+    //     // seeds = [ PDA_MASTER_SEED.as_ref() ],
+    //     // bump = settings.bump,
+    //     payer = owner,
+    //     token::mint = real_token,
+    //     token::authority = owner
+    // )]
+    // pub associated: Account<'info, anchor_spl::token::TokenAccount>,
+    #[account(mut)]
+    pub associated: AccountInfo<'info>,
+    pub associated_token_program: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+    pub system_program: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub owner: Signer<'info>,
+}
+
+
+#[derive(Accounts)]
 #[instruction(
     bump_seed_synthesize_request: u8,
     amount: u64,

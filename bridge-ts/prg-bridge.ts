@@ -1,14 +1,16 @@
 import {
-  Idl,
-  Program,
-  Provider,
+  // Idl,
+  // Program,
+  // Provider,
+  // EventManager,
   web3,
   // Wallet,
-} from "@project-serum/anchor";
+} from '@project-serum/anchor';
+import { IOracleRequestEvent } from './interfaces';
 
 // import { Logger } from '../utils-ts';
 
-import { Base } from "./prg-base";
+import { Base } from './prg-base';
 
 type UInt256 = Buffer;
 type UInt160 = Buffer;
@@ -34,8 +36,12 @@ const seedPDA = Buffer.from('eywa-pda', 'utf-8');
 export class Bridge extends Base {
   // private logger = new Logger();
 
-  public get pid() {
-    return this.program.programId;
+  public async findSettingsAddress(): Promise<[web3.PublicKey, number]> {
+    return this.findProgramAddress([seedPDA]);
+  }
+
+  public async getSettingsAddress(): Promise<web3.PublicKey> {
+    return this.getProgramAddress([seedPDA]);
   }
 
   public addEventListener(
@@ -45,16 +51,14 @@ export class Bridge extends Base {
     return this.program.addEventListener(eventName, callback);
   }
 
-  public async findSettingsAddress(): Promise<[web3.PublicKey, number]> {
-    return this.findProgramAddress([seedPDA]);
-  }
-
-  public async getSettingsAddress(): Promise<web3.PublicKey> {
-    return this.getProgramAddress([seedPDA]);
-  }
-
   public async removeEventListener(listener: number): Promise<void> {
+    // const em = ((this.program as any)._events) as EventManager;
+
     return this.program.removeEventListener(listener);
+  }
+
+  test_emitOracleRequest(oracleRequest: IOracleRequestEvent) {
+    throw new Error('Method not implemented.');
   }
 
   public async fetchSettings(): Promise<IBridgeSettings> {

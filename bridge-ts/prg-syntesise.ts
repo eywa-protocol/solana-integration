@@ -216,6 +216,34 @@ export class Syntesise extends Base {
     return ixCreateRepresentation;
   }
 
+  // Portal
+  public async createRepresentationRequest(
+    // syntName: string,
+    // syntShortName: string,
+    // decimals: number,
+    pubRealToken: web3.PublicKey,
+    owner: web3.PublicKey,
+  ): Promise<web3.TransactionInstruction> {
+    const pubSettings = await this.getSettingsAddress();
+    const pubAssociated = await this.getAssociatedTokenAddress(pubRealToken);
+
+    const accounts = {
+      settings: pubSettings,
+      realToken: pubRealToken,
+      associated: pubAssociated,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      systemProgram: web3.SystemProgram.programId,
+      rent: web3.SYSVAR_RENT_PUBKEY,
+      owner,
+    };
+
+    const ixCreateRepresentationRequest = await this.program.instruction
+    .createRepresentationRequest({ accounts });
+
+    return ixCreateRepresentationRequest;
+  }
+
   public async synthesize(
     amount: BN,
     chainToAddress: Uint8Array | Buffer, // [u8; 20],

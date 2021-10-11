@@ -229,6 +229,41 @@ pub mod eywa_portal_synthesis {
         }
     */
 
+    // createRepresentation onlyOwner
+    pub fn create_representation_request(
+        ctx: Context<CreateRepresentationRequest>,
+        // _bump_seed_mint: u8,
+        // _bump_seed_data: u8,
+        // token_real: [u8; 20],
+    ) -> ProgramResult {
+        let seeds = &[
+            &PDA_MASTER_SEED[..],
+            &[ctx.accounts.settings.bump],
+        ];
+
+        // anchor_spl::associated_token::create
+        let ix = spl_associated_token_account::create_associated_token_account(
+            ctx.accounts.owner.key,
+            ctx.accounts.settings.to_account_info().key,
+            ctx.accounts.real_token.to_account_info().key,
+        );
+        solana_program::program::invoke_signed(
+            &ix,
+            &[
+                ctx.accounts.owner.to_account_info(),
+                ctx.accounts.associated.to_account_info(),
+                ctx.accounts.settings.to_account_info(),
+                ctx.accounts.real_token.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+                ctx.accounts.token_program.to_account_info(),
+                ctx.accounts.rent.to_account_info(),
+            ],
+            &[&seeds[..]], // ctx.signer_seeds,
+        )?;
+
+        Ok(())
+    }
+
     /*
         Тут к нам прилетают заапрувленные SPLки мы их забираем на свой аккаунт и
         через бридж сообщаем эфириумному синтезису, что надо генерить синты.

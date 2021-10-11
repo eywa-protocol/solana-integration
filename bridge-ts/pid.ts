@@ -5,12 +5,6 @@ import privStub from '../target/deploy/test_stub-keypair.json';
 import privGastank from '../target/deploy/eywa_gas_tank-keypair.json';
 import privMain from '../target/deploy/eywa_portal_synthesis-keypair.json';
 
-console.log({
-  privBridge,
-  privStub,
-  privGastank,
-  privMain,
-});
 
 const pairBridge = Keypair.fromSecretKey(Buffer.from(privBridge));
 const pairStub = Keypair.fromSecretKey(Buffer.from(privStub));
