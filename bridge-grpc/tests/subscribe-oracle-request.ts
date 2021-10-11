@@ -21,7 +21,7 @@ async function main() {
   });
   stream.on("end", () => {
     console.log("[subscribeOracleRequest] Done.");
-    process.exit(0);
+    // process.exit(0);
   });
 
   setTimeout(() => {
@@ -44,6 +44,9 @@ async function main() {
       console.log(resp);
     });
   }, 5 * 1000);
+  setTimeout(() => {
+    stream.call?.cancelWithStatus(grpc.status.OK, 'goodbye');
+  }, 10 * 1000);
 }
 
 process.on("uncaughtException", (err) => {

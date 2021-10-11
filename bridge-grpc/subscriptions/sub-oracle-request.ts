@@ -23,6 +23,7 @@ export class OracleRequestSubscription extends ASubscription {
       () => this.bridge.subscribeOracleRequest(this.handler.bind(this)),
       async (id) => this.bridge.unsubscribeBridgeEvent(id),
     );
+
     call.on('finish', () => this.unsubscribe());
   }
 

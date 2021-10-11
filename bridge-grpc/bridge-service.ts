@@ -64,10 +64,11 @@ export class BridgeServer implements IBridgeServer {
   }
 
   async testOracleRequest(
-    call: grpc.ServerUnaryCall<OracleRequest, Empty>
+    call: grpc.ServerUnaryCall<OracleRequest, Empty>,
+    callback: (err: Error, msg: Empty) => void,
   ): Promise<void> {
     const oracleRequest = call.request;
-    console.log(oracleRequest);
+    // console.log(oracleRequest);
     const event: IOracleRequestEvent = {
       requestType: /* string */ oracleRequest.getRequestType(),
       bridge: /* Uint8Array */ oracleRequest.getBridge().getValue() as Uint8Array,
@@ -78,5 +79,6 @@ export class BridgeServer implements IBridgeServer {
       chainid: /* number */ oracleRequest.getChainid(),
     };
     this.bridge.test_emitOracleRequest(event);
+    callback(null, new Empty());
   }
 }

@@ -13,6 +13,15 @@ start-solana:
 clean:
 	rm -rf localnet/
 
+grpc-build:
+	docker build -f .k8s/docker/Dockerfile-bridge-grpc -t eywa-solana-bridge-grpc .
+
+grpc-start:
+	docker run --rm --name eywa-solana-bridge-grpc -t -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 eywa-solana-bridge-grpc:latest
+
+grpc-stop:
+	docker stop eywa-solana-bridge-grpc
+
 test-serializer:
 	# go test -v ./test/01_serializer_test.go
 	go test -v ./test/01_serializer_test.go -run Test_Receive_request_serializer
