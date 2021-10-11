@@ -3,11 +3,11 @@ import * as grpc from "@grpc/grpc-js";
 import { SlotInfo } from "../proto/eywa_solana_pb";
 import { BridgeClient } from '../proto/eywa_solana_grpc_pb';
 import { Empty } from 'google-protobuf/google/protobuf/empty_pb.js';
-console.log(Empty);
 
-// var google_protobuf_empty_pb = require();
 
-const client = new BridgeClient("127.0.0.1:8080", grpc.credentials.createInsecure());
+const urlGrpc = "127.0.0.1:8080";
+// const urlGrpc = "185.132.176.254:8080";
+const client = new BridgeClient(urlGrpc, grpc.credentials.createInsecure());
 
 const empty = new Empty();
 

@@ -18,8 +18,8 @@ kind:
       build_tag: "{{ CI_COMMIT_SHORT_SHA }}"
       docker_img: {{ DOCKER_REGISTRY }}/{{ CI_PROJECT_NAME }}/bridge-grpc
       env:
-        - name: VAR_NAME
-          value: "VAR_VALUE"
+        - name: CNN_URL
+          value: "http://10.1.0.27:8899"
       container_ports:
         - port: 8080
           name: node

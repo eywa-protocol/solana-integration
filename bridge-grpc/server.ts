@@ -11,7 +11,8 @@ import { web3 } from '../bridge-ts/bridge-relayer-client';
   http://185.132.176.254:8899
   ws://185.132.176.254:8900
 */
-const endpoint = 'https://api.testnet.solana.com';
+const envEndpoint = process?.env?.CNN_URL;
+const endpoint = envEndpoint || 'https://api.testnet.solana.com';
 // const endpoint = 'https://api.devnet.solana.com';
 // const endpoint = 'http://185.132.176.254:8899';
 // const config: web3.ConnectionConfig = {};
