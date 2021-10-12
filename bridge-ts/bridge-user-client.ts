@@ -7,7 +7,7 @@ import {
 
 import BridgeFactory from './';
 
-import type { Syntesise } from './prg-syntesise';
+import type { IMintData, Syntesise } from './prg-syntesise';
 
 
 export class BridgeUserClient {
@@ -69,5 +69,17 @@ export class BridgeUserClient {
       pubUser,
       pubSource,
     );
+  }
+
+  public async getListRepresentation(): Promise<IMintData[]> {
+    const settings = await this.main.fetchSettings();
+    const { syntTokens } = settings;
+    const representations: IMintData[] = [];
+    for (const pubMintData of syntTokens) {
+      representations.push(
+        await this.main.fetchSyntData(pubMintData),
+      );
+    }
+    return representations;
   }
 }

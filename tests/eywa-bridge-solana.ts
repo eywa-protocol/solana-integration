@@ -21,7 +21,6 @@ describe('eywa-bridge-solana', () => {
   setProvider(provider);
 
   const accAdmin = web3.Keypair.generate();
-  const accData = web3.Keypair.generate();
 
   const helper = new SolanaHelper(provider);
   const factory = new BridgeFactory(provider.connection);
@@ -43,27 +42,6 @@ describe('eywa-bridge-solana', () => {
     const account = await main.fetchSettings();
     expect(account.owner.toString()).eq(accAdmin.publicKey.toString());
   });
-
-  /*
-  const printKeypair = (title: string, pair: web3.Keypair) => {
-    console.log(title);
-    console.log('PublicKey');
-    const bufPublicKey = pair.publicKey.toBuffer();
-    console.log({
-      base58: pair.publicKey.toBase58(),
-      hex: bufPublicKey.toString('hex'),
-      // binary: bufPublicKey.toString('binary'),
-      json: JSON.stringify(bufPublicKey),
-    });
-    console.log('SecretKey');
-    const bufSecretKey = Buffer.from(pair.secretKey);
-    console.log({
-      hex: bufSecretKey.toString('hex'),
-      // binary: bufSecretKey.toString('binary'),
-      json: JSON.stringify(bufSecretKey),
-    });
-  };
-  */
 
   it("Serialize", async () => {
     const acc1 = web3.Keypair.fromSecretKey(new Uint8Array([
@@ -110,70 +88,11 @@ describe('eywa-bridge-solana', () => {
     transaction.recentBlockhash = recentBlockhash;
     transaction.sign(
       accAdmin,
-      // accMintSynt,
-      // accMintSyntData,
     );
     const bufTx = transaction.serialize();
     console.log('signed transaction');
     console.log(bufTx.toString('hex'));
   });
-
-  /*
-  const mint = web3.Keypair.generate();
-
-  it.skip("Creates an associated token account", async () => {
-    const program = workspace.EywaPortalSynthesis;
-
-    const authority = program.provider.wallet.publicKey;
-    const associatedToken = await program.account.token.associatedAddress(
-      authority,
-      mint.publicKey
-    );
-
-    await program.rpc.createToken({
-      accounts: {
-        token: associatedToken,
-        authority,
-        mint: mint.publicKey,
-        rent: web3.SYSVAR_RENT_PUBKEY,
-        systemProgram: web3.SystemProgram.programId,
-      },
-    });
-
-    const account = await program.account.token.associated(
-      authority,
-      mint.publicKey
-    );
-
-    assert.ok(account.amount === 0);
-    assert.ok(account.authority.equals(authority));
-    assert.ok(account.mint.equals(mint.publicKey));
-  });
-
-  it.skip("Listen event on update", async () => {
-    const program = workspace.EywaPortalSynthesis;
-
-    let listener = null;
-
-    let [event, slot] = await new Promise((resolve, _reject) => {
-      listener = program.addEventListener("MyEvent", (event, slot) => {
-        resolve([event, slot]);
-      });
-      program.rpc.update(new BN(777), {
-        accounts: {
-          data: accData.publicKey,
-          owner: accAdmin.publicKey,
-        },
-        signers: [accAdmin],
-      });
-    });
-    await program.removeEventListener(listener);
-
-    assert.ok(slot > 0);
-    assert.ok(event.data.toNumber() === 777);
-    assert.ok(event.label === "hello");
-  });
-  */
 
   SyntesiseTests({
     provider,

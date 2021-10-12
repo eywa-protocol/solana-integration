@@ -10,6 +10,7 @@ import {
 import { web3 } from '@project-serum/anchor';
 
 import BridgeFactory, { SolanaHelper } from '../../bridge-ts';
+import { BridgeUserClient } from '../../bridge-ts/bridge-user-client';
 
 import type { Provider } from '@project-serum/anchor';
 import type { AsyncParam } from '../utils/async-param';
@@ -60,7 +61,15 @@ export const CreateRepresentationTests = ({
     console.log('mintInfo:', mintInfo);
 
     console.log('mintData:');
-    console.log(await main.fetchSyntData(realToken));
-  });
+    console.log(await main.fetchSyntDataByReal(realToken));
 
+    const settings = await main.fetchSettings();
+    console.log('settings');
+    console.log(settings);
+
+    const client = new BridgeUserClient(provider.connection);
+    const representations = await client.getListRepresentation();
+    console.log('representations');
+    console.log(representations);
+  });
 });

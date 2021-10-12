@@ -1,7 +1,6 @@
 use anchor_lang::{
     Key,
     prelude::*,
-    prelude::borsh::BorshDeserialize,
     solana_program::{
         keccak,
         program_error::ProgramError,
@@ -23,7 +22,6 @@ use ctxt::*;
 declare_id!("7gRLkKiavHbYX29kjPrm2jXcrFYYEKZUrNUxmBTMBDtU");
 
 
-
 #[program]
 pub mod eywa_portal_synthesis {
     use super::*;
@@ -34,11 +32,21 @@ pub mod eywa_portal_synthesis {
         ctx: Context<Initialize>,
         bump_seed: u8,
     ) -> ProgramResult {
+        // msg!(
+        //     "Settings::default().try_to_vec().unwrap().len(): {}",
+        //     Settings::default().try_to_vec().unwrap().len(),
+        // );
+        // msg!(
+        //     "initialize: real_tokens.count: {}",
+        //     ctx.accounts.settings.real_tokens.iter().count(),
+        // );
+
         ctx.accounts.settings.owner = ctx.accounts.owner.key();
         ctx.accounts.settings.portal_nonce = 0;
         ctx.accounts.settings.bridge = ctx.accounts.bridge.key();
         ctx.accounts.settings.bump = bump_seed;
 
+        // ProgramResult::Err(ErrorCode::UnknownError.into())
         Ok(())
     }
 
@@ -61,15 +69,7 @@ pub mod eywa_portal_synthesis {
         tx_id: [u8; 32],   // H256, // id for replay protection
         amount: u64, // от 0 до 18 446 744 073 709 551 615
         // to: Pubkey, // destination for minting synt
-    ) -> ProgramResult { // onlyOwner
-        let a = ctx.accounts.mint_synt.mint_authority.unwrap();
-        let message = format!(
-            "MintSyntheticToken: tx_id={:?}, token_real={:?}, amount={}, to={}, authority={}",
-            tx_id, token_real, amount, ctx.accounts.to.key(),
-            a, // to,
-        );
-        msg!("{}", message);
-
+    ) -> ProgramResult {
         // TODO add chek to Default - чтобы не было по бриджу
         // require(
         //     synthesizeStates[_txID] == SynthesizeState.Default,
@@ -200,11 +200,28 @@ pub mod eywa_portal_synthesis {
         _synt_decimals: u8,
         synt_name: String,
         synt_symbol: String,
+        // chain_id: u64, // ???
     ) -> ProgramResult {
+        let mint_synt = *ctx.accounts.mint_synt.to_account_info().key;
+        let mint_data = *ctx.accounts.mint_data.to_account_info().key;
+
+        let pos = ctx.accounts.settings.synt_tokens.iter()
+        .position(|&pk| mint_synt == pk);
+        if pos != None {
+            return ProgramResult::Err(ErrorCode::TokenAlreadyRegistred.into());
+        }
+
         ctx.accounts.mint_data.name = synt_name;
         ctx.accounts.mint_data.symbol = synt_symbol;
         ctx.accounts.mint_data.token_real = token_real;
         ctx.accounts.mint_data.token_synt = ctx.accounts.mint_synt.key();
+
+        ctx.accounts.settings.synt_tokens.push(mint_data);
+
+        emit!(events::CreatedRepresentation {
+            rtoken: token_real,
+            stoken: mint_synt,
+        });
 
         Ok(())
     }
@@ -214,38 +231,31 @@ pub mod eywa_portal_synthesis {
     // #endregion Synthesis
     // #region Portal
 
-    /*
-        event RepresentationRequest(address indexed _rtoken);
-        event ApprovedRepresentationRequest(address indexed _rtoken);
-
-        function createRepresentationRequest(address _rtoken) external {
-            emit RepresentationRequest(_rtoken);
-        }
-
-        // implies manual verification point
-        function approveRepresentationRequest(address _rtoken) external /**onlyOwner */ {
-            tokenData[_rtoken] = abi.encode(IERC20(_rtoken).name(), IERC20(_rtoken).symbol());
-            emit ApprovedRepresentationRequest(_rtoken);
-        }
-    */
-
-    // createRepresentation onlyOwner
+    // createRepresentationRequest onlyOwner
     pub fn create_representation_request(
         ctx: Context<CreateRepresentationRequest>,
-        // _bump_seed_mint: u8,
-        // _bump_seed_data: u8,
-        // token_real: [u8; 20],
     ) -> ProgramResult {
+        // msg!(
+        //     "Portal: real_tokens: {}",
+        //     ctx.accounts.settings.real_tokens.iter().count(),
+        // );
+
+        let rtoken = *ctx.accounts.real_token.to_account_info().key;
+        let pos = ctx.accounts.settings.real_tokens.iter()
+        .position(|&pk| rtoken == pk);
+        if pos != None {
+            return ProgramResult::Err(ErrorCode::TokenAlreadyRegistred.into());
+        }
+
         let seeds = &[
             &PDA_MASTER_SEED[..],
             &[ctx.accounts.settings.bump],
         ];
 
-        // anchor_spl::associated_token::create
         let ix = spl_associated_token_account::create_associated_token_account(
             ctx.accounts.owner.key,
             ctx.accounts.settings.to_account_info().key,
-            ctx.accounts.real_token.to_account_info().key,
+            &rtoken,
         );
         solana_program::program::invoke_signed(
             &ix,
@@ -258,8 +268,13 @@ pub mod eywa_portal_synthesis {
                 ctx.accounts.token_program.to_account_info(),
                 ctx.accounts.rent.to_account_info(),
             ],
-            &[&seeds[..]], // ctx.signer_seeds,
+            &[&seeds[..]],
         )?;
+
+        ctx.accounts.settings.real_tokens.push(rtoken);
+
+        emit!(events::RepresentationRequest { rtoken });
+        emit!(events::ApprovedRepresentationRequest { rtoken });
 
         Ok(())
     }
@@ -324,8 +339,8 @@ pub mod eywa_portal_synthesis {
             ctx.accounts.into_transmit_request_context()
             .with_signer(&[&seeds[..]]),
             (&[ 1, 2, 3 ]).to_vec(), // &[ 1, 2, 3 ], // &out,
-            "receive_side".to_string(), // receive_side,
-            "opposite_bridge".to_string(), // opposite_bridge,
+            receive_side,
+            opposite_bridge,
             chain_id,
         )?;
         /*
@@ -556,6 +571,7 @@ pub mod eywa_portal_synthesis {
                 .as_slice(),
         );
 
+        /*
         let out = hasher.result().0;
 
         let mut bridge_nonce: BridgeNonce = get_or_create_account_data(
@@ -569,6 +585,7 @@ pub mod eywa_portal_synthesis {
             &[],
             ctx.program_id,
         )?;
+        */
 
         let seeds = &[
             &PDA_MASTER_SEED[..],
@@ -579,8 +596,8 @@ pub mod eywa_portal_synthesis {
             ctx.accounts.into_transmit_request_context()
             .with_signer(&[&seeds[..]]),
             (&[ 1, 2, 3 ]).to_vec(), // &[ 1, 2, 3 ], // &out,
-            "receive_side".to_string(), // receive_side,
-            "opposite_bridge".to_string(), // opposite_bridge,
+            receive_side,
+            opposite_bridge,
             chain_id,
         )?;
         /*
@@ -605,11 +622,22 @@ pub mod eywa_portal_synthesis {
     // #endregion Portal
 
 }
-/*
+
 #[error]
 pub enum ErrorCode {
+    /*
     #[msg("This is an error message clients will automatically display 1234")]
     Test = 1234,
+    */
+    #[msg("Unknown Error")]
+    UnknownError = 2000,
+    #[msg("Token already registred")]
+    TokenAlreadyRegistred,
+    #[msg("Unknown Portal Error")]
+    UnknownPortalError = 3000,
+    #[msg("Unknown Synthesis Error")]
+    UnknownSynthesisError = 4000,
+    /*
     #[msg("Unauthorized")]
     Unauthorized = 2000,
     #[msg("UNTRUSTED DEX")]
@@ -620,5 +648,5 @@ pub enum ErrorCode {
     ValueOutOfBounds,
     #[msg("invalid value")]
     InvalidValue,
+    */
 }
-*/

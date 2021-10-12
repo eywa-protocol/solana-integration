@@ -95,11 +95,21 @@
         },
         {
           "name": "receiveSide",
-          "type": "string"
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
         },
         {
           "name": "oppositeBridge",
-          "type": "string"
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
         },
         {
           "name": "chainId",
@@ -109,35 +119,6 @@
     }
   ],
   "accounts": [
-    {
-      "name": "ContractBind",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "senderSide",
-            "type": {
-              "array": [
-                "u8",
-                20
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "BridgeNonce",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "nonce",
-            "type": "u64"
-          }
-        ]
-      }
-    },
     {
       "name": "Settings",
       "type": {
@@ -221,12 +202,7 @@
         },
         {
           "name": "requestId",
-          "type": {
-            "array": [
-              "u8",
-              32
-            ]
-          },
+          "type": "publicKey",
           "index": false
         },
         {
@@ -236,12 +212,22 @@
         },
         {
           "name": "receiveSide",
-          "type": "string",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          },
           "index": false
         },
         {
           "name": "oppositeBridge",
-          "type": "string",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          },
           "index": false
         },
         {
@@ -284,34 +270,9 @@
   ],
   "errors": [
     {
-      "code": 1534,
-      "name": "Test",
-      "msg": "This is an error message clients will automatically display 1234"
-    },
-    {
-      "code": 2300,
-      "name": "Unauthorized",
-      "msg": "Unauthorized"
-    },
-    {
-      "code": 2301,
-      "name": "UntrustedDex",
-      "msg": "UNTRUSTED DEX"
-    },
-    {
-      "code": 2302,
-      "name": "IndexOutOfBounds",
-      "msg": "index out of bounds"
-    },
-    {
-      "code": 2303,
-      "name": "ValueOutOfBounds",
-      "msg": "value out of bounds"
-    },
-    {
-      "code": 2304,
-      "name": "InvalidValue",
-      "msg": "invalid value"
+      "code": 5300,
+      "name": "UnknownBridgeError",
+      "msg": "Unknown Bridge Error"
     }
   ],
   "metadata": {

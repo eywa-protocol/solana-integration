@@ -76,6 +76,20 @@ pub struct RevertBurnCompleted {
     pub token: [u8; 20],
 }
 
+/*
+    event CreatedRepresentation(
+        address indexed _rtoken,
+        address indexed _stoken,
+    );
+*/
+#[event]
+pub struct CreatedRepresentation {
+    #[index]
+    pub stoken: Pubkey,
+    #[index]
+    pub rtoken: [u8; 20],
+}
+
 // #endregion Synthesis
 // #region Portal
 

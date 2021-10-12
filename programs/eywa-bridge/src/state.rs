@@ -1,11 +1,9 @@
 use anchor_lang::{
     prelude::*,
-    solana_program::{
-        pubkey::Pubkey,
-    },
+    solana_program::pubkey::Pubkey,
 };
 
-
+/*
 #[account]
 pub struct ContractBind {
     pub sender_side: [u8; 20],
@@ -16,6 +14,7 @@ pub struct ContractBind {
 pub struct BridgeNonce {
     pub nonce: u64,
 }
+*/
 
 #[account]
 #[derive(Default)]

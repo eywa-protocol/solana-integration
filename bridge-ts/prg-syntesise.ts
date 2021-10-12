@@ -3,8 +3,8 @@ import {
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import { BN, Idl, Program, Provider, web3 } from "@project-serum/anchor";
-import StubWallet from "./stub-wallet";
+import { BN, Idl, web3 } from "@project-serum/anchor";
+// import StubWallet from "./stub-wallet";
 
 import { Bridge } from "./prg-bridge";
 // import { Logger } from '../utils-ts';
@@ -17,6 +17,7 @@ type HexUInt160 = string;
 
 export interface ISyntesiseSettings {
   owner: web3.PublicKey;
+  syntTokens: web3.PublicKey[];
 }
 
 export interface ISynthesizeRequest {
@@ -24,7 +25,10 @@ export interface ISynthesizeRequest {
 }
 
 export interface IMintData {
-  //
+  tokenReal: HexUInt160, // [u8; 20],
+  tokenSynt: web3.PublicKey,
+  name: String,
+  symbol: String,
 }
 
 const allowOwnerOffCurve = true;
@@ -142,14 +146,25 @@ export class Syntesise extends Base {
   public async fetchSynthesizeRequest(
     pubToken: web3.PublicKey
   ): Promise<ISynthesizeRequest> {
-    return await this.program.account.synthesizeRequestInfo.fetch(
+    return this.program.account.synthesizeRequestInfo.fetch(
       await this.getSynthesizeRequestAddress(pubToken)
     );
   }
 
-  public async fetchSyntData(realToken: HexUInt160): Promise<IMintData> {
-    return await this.program.account.mintData.fetch(
-      await this.getSyntDataAddress(realToken)
+  public async fetchSyntData(
+    pubSyntData: web3.PublicKey,
+  ): Promise<IMintData> {
+    const data = await this.program.account.mintData.fetch(pubSyntData);
+    const { tokenReal } = data as { tokenReal: Uint8Array };
+    return {
+      ...data,
+      tokenReal: Buffer.from(tokenReal).toString('hex'),
+    } as IMintData;
+  }
+
+  public async fetchSyntDataByReal(realToken: HexUInt160): Promise<IMintData> {
+    return this.fetchSyntData(
+      await this.getSyntDataAddress(realToken),
     );
   }
 

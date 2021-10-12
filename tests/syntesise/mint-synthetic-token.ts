@@ -18,14 +18,7 @@ import { sendAndConfirmTransaction } from '../utils/send-and-confirm-transaction
 import type { Provider } from '@project-serum/anchor';
 import type { AsyncParam } from '../utils/async-param';
 
-// import {
-//   // Bridge,
-//   // TestStub,
-//   SolanaHelper,
-//   // StandaloneInstruction,
-//   // Syntesise,
-//   // TransactionAccount,
-// } from '../../bridge-ts';
+import BridgeFactory, { SolanaHelper } from '../../bridge-ts';
 
 import { Logger } from '../../utils-ts';
 
@@ -46,10 +39,10 @@ export const MintSyntheticTokenTests = ({
   // };
 }) => describe('Mint synthetic token', () => {
   let accAdmin: web3.Keypair;
-  // let pubSettings: PublicKey;
-  // let bumpSettings: number;
 
-  // const helper = new SolanaHelper(provider);
+  const helper = new SolanaHelper(provider);
+  const factory = new BridgeFactory(provider.connection);
+  const { main } = factory;
 
   before(async () => {
     accAdmin = (await admin.createPromise()) as web3.Keypair;
@@ -105,7 +98,7 @@ export const MintSyntheticTokenTests = ({
       // 'SSN', // synt short name
     {
       accounts: {
-        // settings: pubSettings,
+        settings: await main.getSettingsAddress(),
         to: walUser, // accTo.publicKey,
         mintSynt: pubkeyMint,
         mintData: pubkeyData,
@@ -137,5 +130,8 @@ export const MintSyntheticTokenTests = ({
     console.log('mintData:');
     console.log(await program.account.mintData.fetch(pubkeyData));
 
+    const settings = await main.fetchSettings();
+    console.log('settings');
+    console.log(settings);
   });
 });

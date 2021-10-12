@@ -49,7 +49,7 @@ describe('bridge', () => {
 
     await helper.sendAndConfirmTransaction(INIT_BRIDGE, tx, accAdmin);
 
-    const [pubSettings, bump] = await bridge.findSettingsAddress();
+    const pubSettings = await bridge.getSettingsAddress();
     // logger.logPublicKey('pubSettings', pubSettings);
     const accountInfo = await provider.connection.getAccountInfo(pubSettings);
     // logger.accountInfo('settings accountInfo', accountInfo);
@@ -102,11 +102,7 @@ describe('bridge', () => {
     // logger.logPublicKey('pidBridge', factory.bridge.pid);
     // logger.logPublicKey('provider', provider.wallet.publicKey);
 
-    const seedSigner = Buffer.from('receive-request-seed', 'utf-8');
-    const [pubSigner, bumpSigner] = await web3.PublicKey.findProgramAddress(
-      [seedSigner],
-      factory.bridge.pid,
-    );
+    const pubSigner = await bridge.getReceiveRequestAddress();
     await helper.transfer(new BN('1000000000000000'), pubSigner);
     // logger.logPublicKey('pubSigner', pubSigner);
     // logger.log('bumpSigner:', bumpSigner);
@@ -151,11 +147,8 @@ describe('bridge', () => {
     // logger.logPublicKey('pidBridge', factory.bridge.pid);
     // logger.logPublicKey('provider', provider.wallet.publicKey);
 
-    const seedSigner = Buffer.from('receive-request-seed', 'utf-8');
-    const [pubSigner, bumpSigner] = await web3.PublicKey.findProgramAddress(
-      [seedSigner],
-      factory.bridge.pid,
-    );
+    const pubSigner = await bridge.getReceiveRequestAddress();
+
     // logger.logPublicKey('pubSigner', pubSigner);
     // logger.log('bumpSigner:', bumpSigner);
     await helper.transfer(new BN('10000000000000000'), pubSigner);

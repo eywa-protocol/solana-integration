@@ -19,10 +19,10 @@ use anchor_lang::{
 pub struct OracleRequest {
     pub request_type: String,
     pub bridge: Pubkey,
-    pub request_id: [u8; 32],
+    pub request_id: Pubkey,
     pub selector: Vec<u8>,
-    pub receive_side: String, //[u8; 20],
-    pub opposite_bridge: String, //[u8; 20],
+    pub receive_side: [u8; 20],
+    pub opposite_bridge: [u8; 20],
     pub chainid: u64,
 
 }
@@ -40,4 +40,3 @@ pub struct ReceiveRequest {
     pub receive_side: Pubkey,
     pub tx_id: [u8; 32],
 }
-
