@@ -37,6 +37,11 @@
       "name": "mintSyntheticToken",
       "accounts": [
         {
+          "name": "settings",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "mintSynt",
           "isMut": true,
           "isSigner": false
@@ -183,7 +188,7 @@
       "accounts": [
         {
           "name": "settings",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -650,18 +655,18 @@
           {
             "name": "bridge",
             "type": "publicKey"
-          }
-        ]
-      }
-    },
-    {
-      "name": "BridgeNonce",
-      "type": {
-        "kind": "struct",
-        "fields": [
+          },
           {
-            "name": "nonce",
-            "type": "u64"
+            "name": "realTokens",
+            "type": {
+              "vec": "publicKey"
+            }
+          },
+          {
+            "name": "syntTokens",
+            "type": {
+              "vec": "publicKey"
+            }
           }
         ]
       }
@@ -899,6 +904,26 @@
       ]
     },
     {
+      "name": "CreatedRepresentation",
+      "fields": [
+        {
+          "name": "stoken",
+          "type": "publicKey",
+          "index": true
+        },
+        {
+          "name": "rtoken",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          },
+          "index": true
+        }
+      ]
+    },
+    {
       "name": "RepresentationRequest",
       "fields": [
         {
@@ -1017,6 +1042,28 @@
           "index": false
         }
       ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 2300,
+      "name": "UnknownError",
+      "msg": "Unknown Error"
+    },
+    {
+      "code": 2301,
+      "name": "TokenAlreadyRegistred",
+      "msg": "Token already registred"
+    },
+    {
+      "code": 3300,
+      "name": "UnknownPortalError",
+      "msg": "Unknown Portal Error"
+    },
+    {
+      "code": 4300,
+      "name": "UnknownSynthesisError",
+      "msg": "Unknown Synthesis Error"
     }
   ],
   "metadata": {

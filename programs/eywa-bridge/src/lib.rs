@@ -1,19 +1,15 @@
 use anchor_lang::{
     prelude::*,
-    prelude::borsh::BorshDeserialize,
     solana_program::{
         declare_id,
         instruction::Instruction,
-        keccak,
+        // keccak,
         program::{
             // invoke,
             invoke_signed,
         },
         pubkey::Pubkey,
-        // system_program,
     },
-    AnchorSerialize,
-    AnchorDeserialize,
 };
 
 pub mod events;
@@ -28,7 +24,6 @@ declare_id!("DXUDgvk4YH47J2HzRDKAsp5zcrvWDXqsCbD3HTghpyCo");
 #[program]
 pub mod eywa_bridge {
     use super::*;
-    // use eywa_lib::get_or_create_account_data;
 
     pub fn initialize(
         ctx: Context<Initialize>,
@@ -77,8 +72,10 @@ pub mod eywa_bridge {
             msg!("{}", format!("req_id: {:?}", req_id));
             msg!("{}", format!("pid: {:?}", ctx.program_id));
 
-            let seed = b"receive-request-seed";
-            let (signer, bump_seed) = Pubkey::find_program_address(&[seed], ctx.program_id);
+            let (signer, bump_seed) = Pubkey::find_program_address(
+                &[PDA_RECEIVE_REQUEST_SEED],
+                ctx.program_id,
+            );
             msg!("{}", format!("signer: [{}]{:?}", bump_seed, signer));
 
             let mut accounts : std::vec::Vec<AccountMeta> = sinst
@@ -108,7 +105,7 @@ pub mod eywa_bridge {
             invoke_signed(
                 &ix,
                 &ctx.remaining_accounts,
-                &[&[&seed[..], &[bump_seed]]],
+                &[&[&PDA_RECEIVE_REQUEST_SEED[..], &[bump_seed]]],
             )?;
 
             // nonce[bridgeFrom] = nonce[bridgeFrom] + 1;
@@ -124,21 +121,23 @@ pub mod eywa_bridge {
         }
 
         pub fn transmit_request(
-            // &mut self,
             ctx: Context<TransmitRequest>,
             selector: Vec<u8>,
-            receive_side: String,//[u8; 20],
-            opposite_bridge: String,//[u8; 20],
+            receive_side: [u8; 20],
+            opposite_bridge: [u8; 20],
             chain_id: u64,
         ) -> ProgramResult {
             // TODO: check whether the sender is included in the list of trusted nodes
 
+            /*
             let request_id = prepare_rq_id(
                 &selector,
                 opposite_bridge.clone(),
                 chain_id,
                 receive_side.clone(),
             );
+            */
+            let request_id = *ctx.accounts.settings.to_account_info().key;
 
             ctx.accounts.settings.nonce += 1;
 
@@ -158,6 +157,7 @@ pub mod eywa_bridge {
     // }
 }
 
+/*
 pub fn prepare_rq_id(
     selector: &Vec<u8>,
     opposite_bridge: String,//[u8; 20],
@@ -172,12 +172,17 @@ pub fn prepare_rq_id(
     );
     hasher.result().0
 }
-
+*/
 
 #[error]
 pub enum ErrorCode {
+    /*
     #[msg("This is an error message clients will automatically display 1234")]
     Test = 1234,
+    */
+    #[msg("Unknown Bridge Error")]
+    UnknownBridgeError = 5000,
+    /*
     #[msg("Unauthorized")]
     Unauthorized = 2000,
     #[msg("UNTRUSTED DEX")]
@@ -188,4 +193,5 @@ pub enum ErrorCode {
     ValueOutOfBounds,
     #[msg("invalid value")]
     InvalidValue,
+    */
 }

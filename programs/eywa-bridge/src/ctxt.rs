@@ -1,10 +1,9 @@
-use anchor_lang::{
-    prelude::*,
-    prelude::borsh::BorshDeserialize,
-    AnchorSerialize,
-};
+use anchor_lang::prelude::*;
+
 
 pub const PDA_MASTER_SEED: &[u8] = b"eywa-pda";
+pub const PDA_RECEIVE_REQUEST_SEED: &[u8] = b"receive-request";
+
 
 #[derive(Accounts)]
 #[instruction(
@@ -18,17 +17,13 @@ pub struct Initialize<'info> {
         bump = bump_seed,
     )]
     pub settings: Account<'info, crate::state::Settings>,
-    #[account(signer)]
-    pub owner: AccountInfo<'info>,
-    // #[account(signer)]
-    // bridge: AccountInfo<'info>,
+    pub owner: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct ReceiveRequest<'info> {
-    #[account(signer)]
-    pub proposer: AccountInfo<'info>,
+    pub proposer: Signer<'info>,
 }
 
 #[derive(Accounts)]
@@ -43,7 +38,8 @@ pub struct TransmitRequest<'info> {
     )]
     pub settings: Account<'info, crate::state::Settings>,
     #[account(signer)]
-    pub signer: AccountInfo<'info>, // portal-synthesis || relayer
+    pub signer: AccountInfo<'info>,
+    // pub signer: Signer<'info>,
     // #[account(signer, mut)]
     // pub nonce_master_account: AccountInfo<'info>,
     // #[account(mut)]

@@ -154,21 +154,8 @@ describe('eywa-portal-solana', () => {
       token.publicKey
     );
     let isDestinationInitialized = false;
-    // (await token.getAccountInfo(pubDestination)).isInitialized
     const tx1 = new web3.Transaction();
     if (!isDestinationInitialized) {
-      /*
-      tx1.add(
-        Token.createAssociatedTokenAccountInstruction(
-          token.associatedProgramId,
-          token.programId,
-          token.publicKey,
-          pubDestination,
-          pubPDAMaster,
-          accUser.publicKey
-        )
-      );
-      */
       const tx2 = new web3.Transaction();
       tx2.add(await main.createRepresentationRequest(
         token.publicKey,
@@ -194,7 +181,6 @@ describe('eywa-portal-solana', () => {
     const dataDestination = await token.getAccountInfo(pubDestination);
     logger.log(dataDestination);
 
-
     logger.log('emergencyUnsynthesize');
     const ixEmergencyUnsynthesize = await main.emergencyUnsynthesize(
       token.publicKey,
@@ -210,6 +196,10 @@ describe('eywa-portal-solana', () => {
       token.publicKey,
     ));
 
+    const settings = await main.fetchSettings();
+    logger.log('settings');
+    logger.log(settings);
+
     // assert.ok(synthesizeRequestAccount.data.slice(120, 128)[0] == 2)
   });
 
@@ -223,23 +213,35 @@ describe('eywa-portal-solana', () => {
         await provider.connection.requestAirdrop(statesMasterAccount.publicKey, 10000000000),
         'confirmed'
     );
+    */
+    const tx_id = '1234';
+    const owner = accAdmin;
+    const mint = token.publicKey;
+    // const statesMasterAccount
+    const pubPDAMaster = await main.getSettingsAddress();
 
+    /*
     const unsynthesizeState = await web3.PublicKey.createWithSeed(
         statesMasterAccount.publicKey,
         tx_id,
         program.programId
     )
-
+    */
+    /*
     let amount = 10;
     let minted = 1000;
     let sourceAccount = await createTokenAccount(provider, mint, provider.wallet.publicKey);
     await mintToAccount(provider, mint, sourceAccount, minted, owner.publicKey)
+    */
 
+    /*
     let destinationAccount = await createTokenAccount(provider, mint, provider.wallet.publicKey);
     // let splTokenKey = new anchor.web3.PublicKey(
     //     TokenInstructions.TOKEN_PROGRAM_ID.toString()
     // );
+    */
 
+    /*
     const [pubSettings, bumpSettings] = await main.findSettingsAddress();
 
     await program.rpc.unsynthesize(

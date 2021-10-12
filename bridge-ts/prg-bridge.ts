@@ -31,6 +31,7 @@ export interface IBridgeSettings {
 }
 
 const seedPDA = Buffer.from('eywa-pda', 'utf-8');
+const seedReceiveRequest = Buffer.from('receive-request', 'utf-8');
 
 
 export class Bridge extends Base {
@@ -42,6 +43,14 @@ export class Bridge extends Base {
 
   public async getSettingsAddress(): Promise<web3.PublicKey> {
     return this.getProgramAddress([seedPDA]);
+  }
+
+  public async findReceiveRequestAddress(): Promise<[web3.PublicKey, number]> {
+    return this.findProgramAddress([seedReceiveRequest]);
+  }
+
+  public async getReceiveRequestAddress(): Promise<web3.PublicKey> {
+    return this.getProgramAddress([seedReceiveRequest]);
   }
 
   public addEventListener(
@@ -93,13 +102,14 @@ export class Bridge extends Base {
     sinst: StandaloneInstruction,
     proposer: web3.PublicKey,
   ): Promise<web3.TransactionInstruction> {
-    const seedSigner = Buffer.from('receive-request-seed', 'utf-8');
-    const [pubSigner, bumpSigner] = await web3.PublicKey.findProgramAddress(
-      [seedSigner],
-      this.program.programId,
-    );
+    // const [pubSigner, bumpSigner] = await web3.PublicKey.findProgramAddress(
+    //   [seedReceiveRequest],
+    //   this.program.programId,
+    // );
     // this.logger.logPublicKey('pubSigner', pubSigner);
     // this.logger.log('bumpSigner:', bumpSigner);
+
+    const pubSigner = await this.getReceiveRequestAddress();
 
     const ixReceiveRequest = await this.program.instruction
     .receiveRequest(
