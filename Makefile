@@ -30,3 +30,6 @@ test:
 	solana program deploy "./target/deploy/eywa_bridge_solana.so"
 	go test -v ./test -run Test_Receive_request
 	# go test -v ./test
+
+gen_proto:
+	protoc --proto_path=proto --go_out=out --go_opt=paths=source_relative proto/eywa_solana.proto
