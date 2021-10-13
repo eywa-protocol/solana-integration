@@ -19,6 +19,7 @@ import type { Provider } from '@project-serum/anchor';
 import type { AsyncParam } from '../utils/async-param';
 
 import BridgeFactory, { SolanaHelper } from '../../bridge-ts';
+import { BridgeUserClient } from '../../bridge-ts/bridge-user-client';
 
 import { Logger } from '../../utils-ts';
 
@@ -133,5 +134,14 @@ export const MintSyntheticTokenTests = ({
     const settings = await main.fetchSettings();
     console.log('settings');
     console.log(settings);
+
+    logger.logPublicKey('TOKEN_PROGRAM_ID', TOKEN_PROGRAM_ID);
+    const client = new BridgeUserClient(provider.connection);
+
+    (await client.fetchAllUserTokenAccountInfos(accAdmin.publicKey))
+    .forEach(b => console.log(b));
+
+    console.log('balances');
+    console.log(await client.fetchAllUserTokenBalances(accAdmin.publicKey));
   });
 });

@@ -7,40 +7,90 @@ import {
 
 import BridgeFactory from './';
 
-import type { IMintData, Syntesise } from './prg-syntesise';
+import type { AccountInfo, MintInfo, u64 } from "@solana/spl-token";
+import type { IMintData, ISynthesizeRequestEvent, Syntesise } from './prg-syntesise';
+
+
+export interface IBurnRequestEvent {
+  //
+}
 
 
 export class BridgeUserClient {
   private main: Syntesise;
+  private accGuest = web3.Keypair.generate();
 
   constructor(
-    connection: web3.Connection,
+    private connection: web3.Connection,
   ) {
     this.main = (new BridgeFactory(connection)).main;
   }
 
-  // public get pidSynthesis() {}
-  // public get pidBridge() {}
+  public async fetchTokenMintInfo(
+    pubToken: web3.PublicKey,
+  ): Promise<MintInfo> {
+    const mintAccount = new Token(
+      this.connection,
+      pubToken,
+      TOKEN_PROGRAM_ID,
+      this.accGuest,
+    );
 
-  // checkContractEvent
+    return mintAccount.getMintInfo();
+  }
 
-  // кошелек Phantom
+  public async fetchTokenAccountInfo(
+    pubToken: web3.PublicKey,
+    pubUser: web3.PublicKey,
+  ): Promise<AccountInfo> {
+    const mintAccount = new Token(
+      this.connection,
+      pubToken,
+      TOKEN_PROGRAM_ID,
+      this.accGuest,
+    );
 
-  /*
-    1. Нужна возможность получаться всю инфу о токене
-    2. Synthesize
-    3. unSynthesize
-    4. representationSynt
-    5. representationReal
-    6. getListRepresentation
+    return mintAccount.getAccountInfo(pubUser);
+  }
 
-    const owner = web3.PublicKey.default;
+  public async fetchUserTokenBalance(
+    pubToken: web3.PublicKey,
+    pubUser: web3.PublicKey,
+  ): Promise<u64> {
+    const ai = await this.fetchTokenAccountInfo(pubToken, pubUser);
+    return ai.amount;
+  }
+
+  public async fetchAllUserTokenAccountInfos(
+    pubUser: web3.PublicKey,
+  ): Promise<AccountInfo[]> {
+    const result: AccountInfo[] = [];
+
     const filter: web3.TokenAccountsFilter = {
-      programId: web3.PublicKey.default,
-      // mint: web3.PublicKey.default,
+      programId: TOKEN_PROGRAM_ID,
     };
-    this.connection.getTokenAccountsByOwner(owner, filter);
-  */
+
+    const resp = await this.connection
+    .getTokenAccountsByOwner(pubUser, filter);
+    for (const { account, pubkey } of resp?.value) {
+      const tokenMint = new web3.PublicKey((account.data as Buffer).slice(0, 32));
+      const ai = await this.fetchTokenAccountInfo(tokenMint, pubkey);
+      result.push(ai);
+    }
+
+    return result;
+  }
+
+  public async fetchAllUserTokenBalances(
+    pubUser: web3.PublicKey,
+  ): Promise<any> {
+    const result: { [publickey: string]: u64 } = {};
+
+    const ais = await this.fetchAllUserTokenAccountInfos(pubUser);
+    ais.forEach(({ mint, amount }) => result[mint.toBase58()] = amount);
+
+    return result;
+  }
 
   public async createPortalSynthesizeInstruction(
     amount: BN,
@@ -71,6 +121,12 @@ export class BridgeUserClient {
     );
   }
 
+  // synthesize.burnSyntheticToken
+  // NOTE: emergencyUnburnRequest portal method for revert unsynthesize. Use in opposite portal
+  // export const revertUnsynthesize = async (
+  // NOTE: emergencyUnsyntesizeRequest synthesize method fro revert synthesize. Use in opposite synthesis
+  // export const revertSynthesize = async (
+
   public async getListRepresentation(): Promise<IMintData[]> {
     const settings = await this.main.fetchSettings();
     const { syntTokens } = settings;
@@ -82,4 +138,36 @@ export class BridgeUserClient {
     }
     return representations;
   }
+
+  private addEventListener(
+    evName: string,
+    handler: (ev: any) => void,
+  ): number {
+    return this.main.addEventListener(evName, handler);
+  }
+
+  private removeEventListener(subscriptionId: number) {
+    return this.main.removeEventListener(subscriptionId);
+  }
+
+  public subscribeSynthesizeRequest(
+    handler: (ev: ISynthesizeRequestEvent) => void,
+  ): number {
+    return this.addEventListener('SynthesizeRequest', handler);
+  }
+
+  public unsubscribeSynthesizeRequest(subscriptionId: number) {
+    return this.main.removeEventListener(subscriptionId);
+  }
+
+  public subscribeBurnRequest(
+    handler: (ev: IBurnRequestEvent) => void,
+  ): number {
+    return this.addEventListener('BurnRequest', handler);
+  }
+
+  public unsubscribeBurnRequest(subscriptionId: number) {
+    return this.removeEventListener(subscriptionId);
+  }
+
 }

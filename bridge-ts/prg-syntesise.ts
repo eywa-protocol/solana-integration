@@ -24,6 +24,10 @@ export interface ISynthesizeRequest {
   //
 }
 
+export interface ISynthesizeRequestEvent {
+  //
+}
+
 export interface IMintData {
   tokenReal: HexUInt160, // [u8; 20],
   tokenSynt: web3.PublicKey,

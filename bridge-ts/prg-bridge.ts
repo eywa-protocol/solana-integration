@@ -53,19 +53,6 @@ export class Bridge extends Base {
     return this.getProgramAddress([seedReceiveRequest]);
   }
 
-  public addEventListener(
-    eventName: string,
-    callback: (event: any, slot: number) => void
-  ): number {
-    return this.program.addEventListener(eventName, callback);
-  }
-
-  public async removeEventListener(listener: number): Promise<void> {
-    // const em = ((this.program as any)._events) as EventManager;
-
-    return this.program.removeEventListener(listener);
-  }
-
   test_emitOracleRequest(oracleRequest: IOracleRequestEvent) {
     throw new Error('Method not implemented.');
   }

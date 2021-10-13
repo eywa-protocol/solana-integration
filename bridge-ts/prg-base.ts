@@ -25,6 +25,17 @@ export abstract class Base {
     return this.program.programId;
   }
 
+  public addEventListener(
+    eventName: string,
+    callback: (event: any, slot: number) => void
+  ): number {
+    return this.program.addEventListener(eventName, callback);
+  }
+
+  public async removeEventListener(listener: number): Promise<void> {
+    return this.program.removeEventListener(listener);
+  }
+
   public async findProgramAddress(
     seeds: (Uint8Array | Buffer)[]
   ): Promise<[web3.PublicKey, number]> {
