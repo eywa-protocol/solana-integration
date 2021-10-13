@@ -4,7 +4,7 @@
 
 install-solana:
 	sh -c "$(curl -sSfL https://release.solana.com/v1.7.8/install)"
-	. /home/$USER/.profile
+	. $HOME/.profile
 
 start-solana:
 	mkdir -pv localnet/ledger
@@ -17,7 +17,7 @@ grpc-build:
 	docker build -f .k8s/docker/Dockerfile-bridge-grpc -t eywa-solana-bridge-grpc .
 
 grpc-start:
-	docker run --rm --name eywa-solana-bridge-grpc -t -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 eywa-solana-bridge-grpc:latest
+	docker run --rm --name eywa-solana-bridge-grpc -t -p 127.0.0.1:8880:8080 -p 127.0.0.1:8881:8081 eywa-solana-bridge-grpc:latest
 
 grpc-stop:
 	docker stop eywa-solana-bridge-grpc
@@ -32,4 +32,4 @@ test:
 	# go test -v ./test
 
 gen_proto:
-	protoc --proto_path=proto --go_out=out --go_opt=paths=source_relative proto/eywa_solana.proto
+	protoc --proto_path=bridge-grpc/proto --go_out=bridge-grpc/proto --go_opt=paths=source_relative bridge-grpc/proto/eywa_solana.proto --go-grpc_out=bridge-grpc/proto --go-grpc_opt=paths=source_relative bridge-grpc/proto/eywa_solana.proto

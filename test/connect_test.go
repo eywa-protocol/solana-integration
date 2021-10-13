@@ -130,7 +130,7 @@ func readAccountFromFile(filename string) (types.Account, error) {
 	return acc, nil
 }
 
-func init() {
+func init_() {
 	// c = client.NewClient(client.TestnetRPCEndpoint)
 	localSolanaUrl = "http://127.0.0.1:8899"
 	c = client.NewClient(localSolanaUrl)
