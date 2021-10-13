@@ -1,4 +1,4 @@
-module gitlab.digiu.ai/blockchainlaboratory/eywa-solana-tests
+module gitlab.digiu.ai/blockchainlaboratory/eywa-solana-test
 
 go 1.16
 
