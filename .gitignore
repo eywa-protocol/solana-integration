@@ -16,4 +16,6 @@ target/deploy/*.so
 target/release
 target/rls
 
+bridge-ts/build/*
+
 **/*.exp.rs
