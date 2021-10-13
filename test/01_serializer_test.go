@@ -6,12 +6,12 @@ import (
 	"log"
 	"testing"
 
-	"example.com/serializer"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/sysprog"
 	"github.com/portto/solana-go-sdk/tokenprog"
 	"github.com/portto/solana-go-sdk/types"
 	"github.com/stretchr/testify/require"
+	"gitlab.digiu.ai/blockchainlaboratory/eywa-solana-test/serializer"
 )
 
 func init() {
@@ -183,15 +183,15 @@ func Test_serializer(t *testing.T) {
 	)
 
 	src := []byte("1234567890123456789012345678901234567890")
-	len := hex.DecodedLen(len(src))
+	decocedLen := hex.DecodedLen(len(src))
 	// dst := make([]byte, hex.DecodedLen(len(src)))
-	dst := make([]byte, len)
+	dst := make([]byte, decocedLen)
 	// dst := [20]byte{}
 	n, err := hex.Decode(dst, src)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("[%d]%x\n", len, dst[:n])
+	fmt.Printf("[%d]%x\n", decocedLen, dst[:n])
 
 	tokenReal := [20]byte{}
 	copy(tokenReal[:], dst)

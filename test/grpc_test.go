@@ -11,7 +11,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/stretchr/testify/assert"
-	"gitlab.digiu.ai/blockchainlaboratory/eywa-solana-tests/bridge-grpc/proto"
+	"gitlab.digiu.ai/blockchainlaboratory/eywa-solana-test/bridge-grpc/proto"
 	"google.golang.org/grpc"
 )
 
@@ -25,7 +25,9 @@ func Test_GRPC_SlotStream(t *testing.T) {
 	conn, err = grpc.Dial("localhost:8880", grpc.WithInsecure())
 	assert.NoError(t, err)
 	assert.NotNil(t, conn)
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	client := proto.NewBridgeClient(conn)
 
