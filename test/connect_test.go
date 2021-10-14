@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"log"
 	"reflect"
@@ -197,11 +198,11 @@ func init_() {
 	fmt.Println("Admin balance:", balance)
 }
 
-// func Test_testnet_connect(t *testing.T) {
-// 	resp, err := c.GetVersion(context.Background())
-// 	require.NoError(t, err)
-// 	fmt.Println("testnet solana version:", resp.SolanaCore)
-// }
+func Test_testnet_connect(t *testing.T) {
+	resp, err := c.GetVersion(context.Background())
+	require.NoError(t, err)
+	t.Log("testnet solana version:", resp.SolanaCore)
+}
 
 // func Test_Stub(t *testing.T) {
 // 	// localSolanaUrl = "http://127.0.0.1:8899"
@@ -219,7 +220,7 @@ func Test_Simple_transfer(t *testing.T) {
 	if err != nil {
 		log.Fatalf("get recent block hash error, err: %v\n", err)
 	}
-	fmt.Println("RecentBlockHash:", res.Blockhash)
+	t.Log("RecentBlockHash:", res.Blockhash)
 
 	balance, err := c.GetBalance(
 		context.Background(),
@@ -228,10 +229,10 @@ func Test_Simple_transfer(t *testing.T) {
 	if err != nil {
 		log.Fatalln("get balance error", err)
 	}
-	fmt.Println("Admin balance:", balance)
+	t.Log("Admin balance:", balance)
 
 	accountA := types.NewAccount()
-	fmt.Println("accountA:", accountA.PublicKey.ToBase58())
+	t.Log("accountA:", accountA.PublicKey.ToBase58())
 
 	rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
 		Instructions: []types.Instruction{
@@ -253,7 +254,7 @@ func Test_Simple_transfer(t *testing.T) {
 	if err != nil {
 		log.Fatalf("send tx error, err: %v\n", err)
 	}
-	log.Println("txHash:", txSig)
+	t.Log("txHash:", txSig)
 
 	for i := 0; i < 10; i++ {
 		fmt.Printf("%v ", i)
@@ -273,7 +274,7 @@ func Test_Simple_transfer(t *testing.T) {
 	if err != nil {
 		log.Fatalln("get balance error", err)
 	}
-	fmt.Println("Admin balance:", balance)
+	t.Log("Admin balance:", balance)
 
 	balance, err = c.GetBalance(
 		context.Background(),
@@ -282,16 +283,16 @@ func Test_Simple_transfer(t *testing.T) {
 	if err != nil {
 		log.Fatalln("get balance error", err)
 	}
-	fmt.Println("accountA balance:", balance)
+	t.Log("accountA balance:", balance)
 }
 
 func Test_Create_representation(t *testing.T) {
-	program, err := readAccountFromFile("../target/deploy/eywa_bridge_solana-keypair.json")
+	program, err := readAccountFromFile("../target/deploy/eywa_bridge-keypair.json")
 	if err != nil {
 		log.Fatalln("read pid error", err)
 	}
-	fmt.Println("program account:", program.PublicKey.ToBase58())
-	fmt.Printf("program account: %x\n", program.PublicKey.Bytes())
+	t.Log("program account:", program.PublicKey.ToBase58())
+	t.Logf("program account: %x\n", program.PublicKey.Bytes())
 
 	info, err := c.GetAccountInfo(
 		context.Background(),
@@ -307,18 +308,19 @@ func Test_Create_representation(t *testing.T) {
 	if err != nil {
 		log.Fatalln("program.GetAccountInfo error", err)
 	}
-	fmt.Println("program:", info)
+	require.NotNil(t, info)
+	t.Log("program:", info)
 
 	accMintSynt := types.NewAccount()
 	accMintSyntData := types.NewAccount()
 
-	fmt.Printf("accAdmin.PublicKey: %x (%s)\n", accAdmin.PublicKey.Bytes(), accMintSynt.PublicKey.ToBase58())
-	fmt.Println("accMintSynt:", accMintSynt.PublicKey.ToBase58())
-	fmt.Printf("accMintSynt: %x\n", accMintSynt.PublicKey.Bytes())
-	fmt.Println("accMintSyntData:", accMintSyntData.PublicKey.ToBase58())
-	fmt.Printf("accMintSyntData: %x\n", accMintSynt.PublicKey.Bytes())
-	fmt.Printf("mintSynt.PublicKey:  %x\n", accMintSynt.PublicKey.Bytes())
-	fmt.Printf("mintSyntData.PublicKey:  %x\n", accMintSyntData.PublicKey.Bytes())
+	t.Logf("accAdmin.PublicKey: %x (%s)\n", accAdmin.PublicKey.Bytes(), accMintSynt.PublicKey.ToBase58())
+	t.Log("accMintSynt:", accMintSynt.PublicKey.ToBase58())
+	t.Logf("accMintSynt: %x\n", accMintSynt.PublicKey.Bytes())
+	t.Log("accMintSyntData:", accMintSyntData.PublicKey.ToBase58())
+	t.Logf("accMintSyntData: %x\n", accMintSynt.PublicKey.Bytes())
+	t.Logf("mintSynt.PublicKey:  %x\n", accMintSynt.PublicKey.Bytes())
+	t.Logf("mintSyntData.PublicKey:  %x\n", accMintSyntData.PublicKey.Bytes())
 
 	space := uint64(82)
 	// lamports := uint64(1461600)
@@ -326,7 +328,7 @@ func Test_Create_representation(t *testing.T) {
 	if err != nil {
 		log.Fatalf("GetMinimumBalanceForRentExemption error: %v\n", err)
 	}
-	fmt.Println("lamports for creating Synthesis Token Account (Mint):", lamports)
+	t.Log("lamports for creating Synthesis Token Account (Mint):", lamports)
 	ixCreateSynt := sysprog.CreateAccount(
 		accAdmin.PublicKey,
 		accMintSynt.PublicKey,
@@ -341,7 +343,7 @@ func Test_Create_representation(t *testing.T) {
 	if err != nil {
 		log.Fatalf("GetMinimumBalanceForRentExemption error: %v\n", err)
 	}
-	fmt.Println("lamports for creating Synthesis Data Account:", lamports)
+	t.Log("lamports for creating Synthesis Data Account:", lamports)
 	ixCreateMintData := sysprog.CreateAccount(
 		accAdmin.PublicKey,
 		accMintSyntData.PublicKey,
@@ -364,7 +366,7 @@ func Test_Create_representation(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("[%d]%x\n", decodedLen, dst[:n])
+	t.Logf("[%d]%x\n", decodedLen, dst[:n])
 
 	tokenReal := [20]byte{}
 	copy(tokenReal[:], dst)
@@ -384,7 +386,7 @@ func Test_Create_representation(t *testing.T) {
 	if err != nil {
 		log.Fatalf("get recent block hash error, err: %v\n", err)
 	}
-	fmt.Println("RecentBlockHash:", res.Blockhash)
+	t.Log("RecentBlockHash:", res.Blockhash)
 
 	rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
 		Instructions: []types.Instruction{
@@ -405,24 +407,24 @@ func Test_Create_representation(t *testing.T) {
 		log.Fatalf("generate tx error, err: %v\n", err)
 	}
 
-	fmt.Printf("rawTx: %x\n", rawTx)
+	t.Logf("rawTx: %x\n", rawTx)
 
 	txSig, err := c.SendRawTransaction(context.Background(), rawTx)
 	if err != nil {
-		log.Fatalf("send tx error, err: %v\n", err)
+		t.Fatalf("send tx error, err: %v\n", err)
 	}
 
-	log.Println("txHash:", txSig)
+	t.Log("txHash:", txSig)
 }
 
 func Test_Receive_request(t *testing.T) {
-	program, err := readAccountFromFile("../target/deploy/eywa_bridge_solana-keypair.json")
+	program, err := readAccountFromFile("../target/deploy/eywa_bridge-keypair.json")
 	if err != nil {
 		log.Fatalln("read pid error", err)
 	}
 	pidThisProgram := program.PublicKey
-	fmt.Println("program account:", pidThisProgram.ToBase58())
-	fmt.Printf("program account: %x\n", pidThisProgram.Bytes())
+	t.Log("program account:", pidThisProgram.ToBase58())
+	t.Logf("program account: %x\n", pidThisProgram.Bytes())
 	/*
 	       const ixHello = await program.instruction.hello('World', {
 	         accounts: {
@@ -437,7 +439,7 @@ func Test_Receive_request(t *testing.T) {
 	// InstructionHello := [8]uint8{
 	// 	149, 118, 59, 220, 196, 127, 161, 179,
 	// }
-	// fmt.Printf("InstructionHello: %x\n", InstructionHello)
+	// t.Logf("InstructionHello: %x\n", InstructionHello)
 
 	personName := "World"
 	// dataHello, err := common.SerializeData(struct {
@@ -452,7 +454,7 @@ func Test_Receive_request(t *testing.T) {
 	// if err != nil {
 	// 	panic(err)
 	// }
-	// fmt.Printf("dataHello: %x\n", dataHello)
+	// t.Logf("dataHello: %x\n", dataHello)
 
 	pubAdmin := accAdmin.PublicKey
 	/*
@@ -496,7 +498,7 @@ func Test_Receive_request(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("sInstData: %x\n", sInstData)
+	t.Logf("sInstData: %x\n", sInstData)
 
 	/*
 	   const ixReceiveRequest = await program.state.instruction.receiveRequest(
@@ -516,7 +518,7 @@ func Test_Receive_request(t *testing.T) {
 	InstructionReceiveRequest := [8]uint8{
 		92, 46, 108, 42, 179, 64, 8, 139,
 	}
-	fmt.Printf("InstructionReceiveRequest: %x\n", InstructionReceiveRequest)
+	t.Logf("InstructionReceiveRequest: %x\n", InstructionReceiveRequest)
 
 	// personName := "World"
 	dataReceiveRequest, err := common.SerializeData(struct {
@@ -538,7 +540,7 @@ func Test_Receive_request(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("dataReceiveRequest: %x\n", dataReceiveRequest)
+	t.Logf("dataReceiveRequest: %x\n", dataReceiveRequest)
 
 	ixReceiveRequest := types.Instruction{
 		ProgramID: pidThisProgram,
@@ -555,8 +557,8 @@ func Test_Receive_request(t *testing.T) {
 	if err != nil {
 		log.Fatalf("get recent block hash error, err: %v\n", err)
 	}
-	fmt.Println("RecentBlockHash:", res.Blockhash)
-	fmt.Printf("RecentBlockHash: %x\n", res.Blockhash)
+	t.Logf("RecentBlockHash: %v\n", res.Blockhash)
+	t.Logf("RecentBlockHash: %x\n", res.Blockhash)
 
 	rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
 		Instructions: []types.Instruction{
@@ -572,7 +574,7 @@ func Test_Receive_request(t *testing.T) {
 		log.Fatalf("generate tx error, err: %v\n", err)
 	}
 
-	fmt.Printf("rawTx: %x\n", rawTx)
+	t.Logf("rawTx: %x\n", rawTx)
 	/*
 		01
 		ad41459031dfe43fbeb0229c8f9d75f1ec6ce1a4e6c805dfb2c7c977f21dd306
@@ -632,8 +634,8 @@ func Test_Receive_request(t *testing.T) {
 
 	txSig, err := c.SendRawTransaction(context.Background(), rawTx)
 	if err != nil {
-		log.Fatalf("send tx error, err: %v\n", err)
+		t.Fatalf("send tx error, err: %v\n", err)
 	}
 
-	log.Println("txHash:", txSig)
+	t.Log("txHash:", txSig)
 }
