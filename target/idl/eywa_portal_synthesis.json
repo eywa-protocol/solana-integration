@@ -34,6 +34,48 @@
       ]
     },
     {
+      "name": "setBridge",
+      "accounts": [
+        {
+          "name": "settings",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "bridge",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "setOwner",
+      "accounts": [
+        {
+          "name": "settings",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "newOwner",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "mintSyntheticToken",
       "accounts": [
         {

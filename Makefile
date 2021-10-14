@@ -22,6 +22,62 @@ grpc-start:
 grpc-stop:
 	docker stop eywa-solana-bridge-grpc
 
+admin-balance-devnet:
+	solana balance -C keys/config-devnet.yml HFX5NfespGwHWVG1ixhbz1Yea64RD92Q6SsUfwvHow7n
+
+admin-balance-testnet:
+	solana balance -C keys/config-testnet.yml HFX5NfespGwHWVG1ixhbz1Yea64RD92Q6SsUfwvHow7n
+
+admin-balance-local:
+	solana balance -C keys/config-local.yml HFX5NfespGwHWVG1ixhbz1Yea64RD92Q6SsUfwvHow7n
+
+admin-airdrop-devnet:
+	solana airdrop -C keys/config-devnet.yml 1
+
+admin-airdrop-testnet:
+	solana airdrop -C keys/config-testnet.yml 1
+
+admin-airdrop-local:
+	solana airdrop -C keys/config-local.yml 200
+
+deploy-bridge-devnet:
+	solana program deploy -v -C keys/config-devnet.yml --max-len 2000000 --program-id "./target/deploy/eywa_bridge-keypair.json" "./target/deploy/eywa_bridge.so"
+
+deploy-bridge-testnet:
+	solana program deploy -v -C keys/config-testnet.yml --max-len 2000000 --program-id "./target/deploy/eywa_bridge-keypair.json" "./target/deploy/eywa_bridge.so"
+
+redeploy-bridge-devnet:
+	solana program deploy -v -C keys/config-devnet.yml "./target/deploy/eywa_bridge.so"
+
+redeploy-bridge-testnet:
+	solana program deploy -v -C keys/config-testnet.yml "./target/deploy/eywa_bridge.so"
+
+deploy-bridge-local:
+	solana program deploy -v -C keys/config-local.yml --max-len 2000000 --program-id "./target/deploy/eywa_bridge-keypair.json" "./target/deploy/eywa_bridge.so"
+
+deploy-portal-devnet:
+	solana program deploy -v -C keys/config-devnet.yml --max-len 3000000 --program-id "./target/deploy/eywa_portal_synthesis-keypair.json" "./target/deploy/eywa_portal_synthesis.so"
+
+deploy-portal-testnet:
+	solana program deploy -v -C keys/config-testnet.yml --max-len 3000000 --program-id "./target/deploy/eywa_portal_synthesis-keypair.json" "./target/deploy/eywa_portal_synthesis.so"
+
+redeploy-portal-devnet:
+	solana program deploy -v -C keys/config-devnet.yml "./target/deploy/eywa_portal_synthesis.so"
+
+redeploy-portal-testnet:
+	solana program deploy -v -C keys/config-testnet.yml "./target/deploy/eywa_portal_synthesis.so"
+
+deploy-portal-local:
+	solana program deploy -v -C keys/config-local.yml --max-len 3000000 --program-id "./target/deploy/eywa_portal_synthesis-keypair.json" "./target/deploy/eywa_portal_synthesis.so"
+
+init-local:
+	solana airdrop -C keys/config-local.yml 200
+	solana program deploy -v -C keys/config-local.yml --max-len 2000000 --program-id "./target/deploy/eywa_bridge-keypair.json" "./target/deploy/eywa_bridge.so"
+	solana program deploy -v -C keys/config-local.yml --max-len 3000000 --program-id "./target/deploy/eywa_portal_synthesis-keypair.json" "./target/deploy/eywa_portal_synthesis.so"
+	npm run deploy:init:local
+	npm run set:owner:local
+	npm run token:init:local
+
 test-serializer:
 	# go test -v ./test/01_serializer_test.go
 	go test -v ./test/01_serializer_test.go -run Test_Receive_request_serializer

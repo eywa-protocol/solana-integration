@@ -28,7 +28,7 @@ function main() {
     server.start();
     healthServer.listen(8081);
   };
-
+web3.PublicKey.default
   server.bindAsync(
     '0.0.0.0:8080',
     grpc.ServerCredentials.createInsecure(),

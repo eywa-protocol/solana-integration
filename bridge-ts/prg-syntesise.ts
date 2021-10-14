@@ -199,6 +199,25 @@ export class Syntesise extends Base {
     return ixInit;
   }
 
+  public async setOwner(
+    pubOwner: web3.PublicKey
+  ): Promise<web3.TransactionInstruction> {
+    const [pdaSettings, bumpSettings] = await this.findSettingsAddress();
+
+    const ixSetOwner = this.program.instruction
+    .setOwner({
+      accounts: {
+        settings: pdaSettings, // Buffer.from(''),
+        // owner: this.owner.publicKey,
+        owner: pubOwner, // this.pubBridgeSigner,
+        newOwner: pubOwner,
+        // systemProgram: web3.SystemProgram.programId,
+      },
+    });
+
+    return ixSetOwner;
+  }
+
   public async createRepresentation(
     syntName: string,
     syntShortName: string,

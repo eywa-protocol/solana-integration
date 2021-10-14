@@ -15,6 +15,8 @@ pub struct Initialize<'info> {
         payer = owner,
         seeds = [ PDA_MASTER_SEED.as_ref() ],
         bump = bump_seed,
+        // space = 8 + (32 + 8 + 1) // crate::state::Settings::LEN,
+        space = 10000,
     )]
     pub settings: Account<'info, crate::state::Settings>,
     pub owner: Signer<'info>,

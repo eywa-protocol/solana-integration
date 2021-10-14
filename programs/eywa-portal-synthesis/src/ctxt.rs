@@ -17,13 +17,44 @@ pub struct Initialize<'info> {
         payer = owner,
         seeds = [ PDA_MASTER_SEED.as_ref() ],
         bump = bump_seed,
-        space = 8 + 8 + 32 * 50 + 8 + 32 * 250 + 77,
+        // space = 8 + 8 + 32 * 50 + 8 + 32 * 250 + 77,
+        space = 10000,
     )]
     pub settings: Account<'info, crate::state::Settings>,
     #[account(mut)]
     pub owner: Signer<'info>,
     pub bridge: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct SetBridge<'info> {
+    #[account(
+        mut,
+        // constraint = &settings.owner == owner.key,
+        seeds = [ PDA_MASTER_SEED.as_ref() ],
+        bump = settings.bump
+    )]
+    pub settings: Account<'info, crate::state::Settings>,
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    pub bridge: AccountInfo<'info>,
+    // pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct SetOwner<'info> {
+    #[account(
+        mut,
+        // constraint = &settings.owner == owner.key,
+        seeds = [ PDA_MASTER_SEED.as_ref() ],
+        bump = settings.bump
+    )]
+    pub settings: Account<'info, crate::state::Settings>,
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    pub new_owner: AccountInfo<'info>,
+    // pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -50,7 +81,8 @@ pub struct CreateRepresentation<'info> {
         seeds = [ PDA_MINT_DATA_SEED.as_ref(), &token_real[..] ],
         bump = bump_seed_data,
         payer = owner,
-        space = 1000,
+        // space = 1000,
+        space = 10000,
     )]
     pub mint_data: Account<'info, crate::state::MintData>,
     pub token_program: AccountInfo<'info>,
@@ -140,6 +172,7 @@ pub struct Synthesize<'info> {
         ],
         bump = bump_seed_synthesize_request,
         // authority = pda_master,
+        space = 10000,
         payer = client
     )]
     pub synthesize_request: ProgramAccount<'info, crate::state::SynthesizeRequestInfo>,

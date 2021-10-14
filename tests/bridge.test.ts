@@ -178,5 +178,14 @@ describe('bridge', () => {
 
     // expect(param).eq('100');
     // expect(owner).eq(accAdmin.publicKey.toBase58());
+
+    console.log(await main.fetchSettings());
+    const ixSetOwner = await main.setOwner(accAdmin.publicKey);
+    const tx2 = new web3.Transaction();
+    tx2.add(ixSetOwner);
+    tx2.recentBlockhash = await helper.getRecentBlockhash();
+    await helper.sendAndConfirmTransaction('setOwner', tx2, accAdmin);
+    console.log(await main.fetchSettings());
+    console.log(accAdmin.publicKey.toBuffer().toString('hex'));
   });
 });

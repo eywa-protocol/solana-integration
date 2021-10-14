@@ -50,6 +50,22 @@ pub mod eywa_portal_synthesis {
         Ok(())
     }
 
+    pub fn set_bridge(
+        ctx: Context<SetBridge>,
+    ) -> ProgramResult {
+        ctx.accounts.settings.bridge = ctx.accounts.bridge.key();
+
+        Ok(())
+    }
+
+    pub fn set_owner(
+        ctx: Context<SetOwner>,
+    ) -> ProgramResult {
+        ctx.accounts.settings.owner = ctx.accounts.new_owner.key();
+
+        Ok(())
+    }
+
 
     // changeBridge onlyOwner
     // should be restricted in mainnets
@@ -235,10 +251,10 @@ pub mod eywa_portal_synthesis {
     pub fn create_representation_request(
         ctx: Context<CreateRepresentationRequest>,
     ) -> ProgramResult {
-        // msg!(
-        //     "Portal: real_tokens: {}",
-        //     ctx.accounts.settings.real_tokens.iter().count(),
-        // );
+        msg!(
+            "Portal: real_tokens: {}",
+            ctx.accounts.settings.real_tokens.iter().count(),
+        );
 
         let rtoken = *ctx.accounts.real_token.to_account_info().key;
         let pos = ctx.accounts.settings.real_tokens.iter()
