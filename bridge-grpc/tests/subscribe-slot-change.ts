@@ -5,7 +5,7 @@ import { BridgeClient } from '../proto/eywa_solana_grpc_pb';
 import { Empty } from 'google-protobuf/google/protobuf/empty_pb.js';
 
 
-// const urlGrpc = "127.0.0.1:8080";
+// const urlGrpc = "127.0.0.1:8880";
 // const client = new BridgeClient(urlGrpc, grpc.credentials.createInsecure());
 const urlGrpc = "solana-hackathon.dev.eywa.fi:443";
 const client = new BridgeClient(urlGrpc, grpc.credentials.createSsl());

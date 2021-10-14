@@ -12,12 +12,12 @@ import (
 	"testing"
 	"time"
 
-	"example.com/serializer"
 	"github.com/portto/solana-go-sdk/client"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/sysprog"
 	"github.com/portto/solana-go-sdk/tokenprog"
 	"github.com/portto/solana-go-sdk/types"
+	"gitlab.digiu.ai/blockchainlaboratory/eywa-solana-test/serializer"
 )
 
 var c *client.Client
@@ -130,7 +130,7 @@ func readAccountFromFile(filename string) (types.Account, error) {
 	return acc, nil
 }
 
-func init() {
+func init_() {
 	// c = client.NewClient(client.TestnetRPCEndpoint)
 	localSolanaUrl = "http://127.0.0.1:8899"
 	c = client.NewClient(localSolanaUrl)
@@ -358,13 +358,13 @@ func Test_Create_representation(t *testing.T) {
 	)
 
 	src := []byte("1234567890123456789012345678901234567890")
-	len := hex.DecodedLen(len(src))
-	dst := make([]byte, len)
+	decodedLen := hex.DecodedLen(len(src))
+	dst := make([]byte, decodedLen)
 	n, err := hex.Decode(dst, src)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("[%d]%x\n", len, dst[:n])
+	fmt.Printf("[%d]%x\n", decodedLen, dst[:n])
 
 	tokenReal := [20]byte{}
 	copy(tokenReal[:], dst)

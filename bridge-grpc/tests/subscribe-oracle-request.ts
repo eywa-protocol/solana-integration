@@ -9,7 +9,7 @@ import { BridgeClient } from '../proto/eywa_solana_grpc_pb';
 import * as msgHelpers from '../msg-helpers';
 
 
-const client = new BridgeClient("127.0.0.1:8080", grpc.credentials.createInsecure());
+const client = new BridgeClient("127.0.0.1:8880", grpc.credentials.createInsecure());
 
 const empty = new Empty();
 

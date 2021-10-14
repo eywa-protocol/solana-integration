@@ -3,7 +3,7 @@ syntax = "proto3";
 // import "google/protobuf/any.proto";
 import "google/protobuf/empty.proto";
 
-option go_package = "github.com/digiu-ai/eywa-solana-grpc";
+option go_package = "gitlab.digiu.ai/blockchainlaboratory/eywa-solana-test/eywa-solana-grpc/bridge-grpc/proto;proto";
 
 package eywa_solana_grpc;
 
