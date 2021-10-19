@@ -1,4 +1,7 @@
-import { assert, expect } from 'chai';
+import {
+  // assert,
+  expect,
+} from 'chai';
 
 import {
   BN,
@@ -30,8 +33,6 @@ describe('eywa-portal-solana', () => {
 
   let token: Token;
 
-  let signature: Promise<web3.TransactionSignature>;
-
   before(async () => {
     logger.logPublicKey('TOKEN_PROGRAM_ID', TOKEN_PROGRAM_ID);
     logger.logPublicKey('SYSVAR_RENT_PUBKEY', web3.SYSVAR_RENT_PUBKEY);
@@ -43,11 +44,11 @@ describe('eywa-portal-solana', () => {
     const tx = new web3.Transaction();
     tx.add(await bridge.init(accAdmin));
     tx.recentBlockhash = await helper.getRecentBlockhash();
-    await (signature = helper.sendAndConfirmTransaction(
+    await helper.sendAndConfirmTransaction(
       'Initialize bridge',
       tx,
       accAdmin
-    ));
+    );
 
     const accPayerHelper = web3.Keypair.generate();
     logger.logPublicKey('accPayerHelper', accPayerHelper.publicKey);
@@ -83,22 +84,6 @@ describe('eywa-portal-solana', () => {
     // apSettings.resolve({ pubSettings, bumpSettings });
   });
 
-  const CHECK_ACCADMIN = 'Check accAdmin';
-  it(CHECK_ACCADMIN, async () => {
-    const parsedTx = await provider.connection.getParsedConfirmedTransaction(
-      await signature,
-      'confirmed'
-    );
-
-    if (parsedTx === null) {
-      expect(parsedTx).not.to.be.null;
-      return;
-    }
-
-    const { signatures } = parsedTx.transaction;
-    expect(signatures[0]).to.eq(await signature);
-  });
-
   const PORTAL_SYNTHESIZE = 'Portal Synthesize';
   it(PORTAL_SYNTHESIZE, async () => {
     logger.logPublicKey('accAdmin', accAdmin.publicKey);
@@ -132,10 +117,17 @@ describe('eywa-portal-solana', () => {
     expect((await token.getAccountInfo(pubSource)).isInitialized).to.eq(true);
 
     // logger.log(await token.getAccountInfo(pubSource));
-    const supply = (await provider.connection.getTokenSupply(token.publicKey))
-      .value;
+    const supply = (await provider.connection.getTokenSupply(token.publicKey)).value;
 
     expect(supply.uiAmount).to.eq(amount);
+
+    const listenerId = bridge.addEventListener(
+      'OracleRequest',
+      (event, slot) => {
+        console.log('OracleRequest', event);
+        bridge.removeEventListener(listenerId);
+      },
+    );
 
     logger.log('ixSynthesize');
     const ixSynthesize = await main.synthesize(
@@ -157,25 +149,51 @@ describe('eywa-portal-solana', () => {
     const tx1 = new web3.Transaction();
     if (!isDestinationInitialized) {
       const tx2 = new web3.Transaction();
-      tx2.add(await main.createRepresentationRequest(
-        token.publicKey,
-        accAdmin.publicKey,
-      ));
-      await helper.sendAndConfirmTransaction('createRepresentationRequest', tx2, accAdmin);
+      tx2.add(
+        await main.createRepresentationRequest(
+          token.publicKey,
+          accAdmin.publicKey
+        )
+      );
+      await helper.sendAndConfirmTransaction(
+        "createRepresentationRequest",
+        tx2,
+        accAdmin
+      );
     }
     tx1.add(ixSynthesize);
 
-    await helper.sendAndConfirmTransaction(PORTAL_SYNTHESIZE, tx1, accUser);
+    const signature = await helper.sendAndConfirmTransaction(
+      PORTAL_SYNTHESIZE,
+      tx1,
+      accUser
+    );
+
+    // const parsedTx = await provider.connection.getParsedConfirmedTransaction(
+    //   signature,
+    //   "finalized"
+    // );
+
+    // if (parsedTx === null) {
+    //   expect(parsedTx).not.to.be.null;
+    //   return;
+    // }
+
+    // const { signatures } = parsedTx.transaction;
+    // expect(signatures[0]).to.eq(await signature);
+
+    logger.log("signature:", signature);
+    // logger.log("parsedTx:", parsedTx);
 
     logger.log('synthesizeRequestAccount');
     logger.log(await main.fetchSynthesizeRequestAccountInfo(token.publicKey));
 
     logger.log('fetch pubSynthesizeRequest');
-    const dataSynthesizeRequest = await main.fetchSynthesizeRequest(
+    const dataSynthesizeRequest = await main.fetchTxState(
       token.publicKey
     );
 
-    dataSynthesizeRequest;
+    // dataSynthesizeRequest;
     logger.log(dataSynthesizeRequest);
 
     const dataDestination = await token.getAccountInfo(pubDestination);
@@ -189,10 +207,14 @@ describe('eywa-portal-solana', () => {
     );
     const tx2 = new web3.Transaction();
     tx2.add(ixEmergencyUnsynthesize);
-    await helper.sendAndConfirmTransaction('send emergencyUnsynthesize', tx2, accUser);
+    await helper.sendAndConfirmTransaction(
+      'send emergencyUnsynthesize',
+      tx2,
+      accUser
+    );
 
     logger.log('synthesizeRequestAccount');
-    logger.log(await main.fetchSynthesizeRequestAccountInfo(
+    logger.log(await main.fetchTxState(
       token.publicKey,
     ));
 

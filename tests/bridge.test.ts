@@ -1,6 +1,6 @@
 import {
-  assert,
-  // expect,
+  // assert,
+  expect,
 } from 'chai';
 
 import {
@@ -10,11 +10,16 @@ import {
   web3,
 } from '@project-serum/anchor';
 
-import BridgeFactory, {
-  SolanaHelper,
+import BridgeFactory, { SolanaHelper } from '../bridge-ts';
+
+import type {
   StandaloneInstruction,
   TransactionAccount,
-} from '../bridge-ts';
+} from '../bridge-ts/interfaces';
+import type {
+  // UInt256,
+  UInt160,
+} from '../bridge-ts/interfaces/types';
 
 // import { Logger } from '../utils-ts';
 
@@ -58,6 +63,29 @@ describe('bridge', () => {
   });
 
   it('Hello World', async () => {
+    const addrBridgeFrom: UInt160 = Buffer.from(
+      '1122334455667788990011223344556677889900',
+      'hex',
+    );
+    const addrContractFrom: UInt160 = Buffer.from(
+      '1122334455667788990011223344556677889900',
+      'hex',
+    );
+
+    const ixBind = await bridge.addContractReceiveBind(
+      addrBridgeFrom,
+      addrContractFrom,
+      accAdmin.publicKey,
+    );
+    const tx0 = new web3.Transaction();
+    tx0.add(ixBind);
+    tx0.recentBlockhash = await helper.getRecentBlockhash();
+    await helper.sendAndConfirmTransaction(
+    'bridge.addContractReceiveBind',
+      tx0,
+      accAdmin,
+    );
+
     const ixHello = await stub.hello(
       'provider.wallet',
       provider.wallet.publicKey,
@@ -71,8 +99,11 @@ describe('bridge', () => {
     }
 
     const ixReceiveRequest = await bridge.receiveRequest(
-      Buffer.from('1122334455667788990011223344556677889900112233445566778899001122', 'hex'),
-      Buffer.from('1122334455667788990011223344556677889900', 'hex'),
+      new web3.PublicKey(Buffer.from(
+        '1122334455667788990011223344556677889900112233445566778899001122',
+      'hex')),
+      addrBridgeFrom,
+      addrContractFrom,
       sinstHello,
       accAdmin.publicKey,
     );
@@ -88,7 +119,7 @@ describe('bridge', () => {
       });
       // await
       helper.sendAndConfirmTransaction(
-        'createAccount and InitializeMint',
+        'Hello World',
         tx,
         accAdmin,
       );
@@ -117,7 +148,10 @@ describe('bridge', () => {
     }
 
     const ixReceiveRequest = await bridge.receiveRequest(
-      Buffer.from('1122334455667788990011223344556677889900112233445566778899001122', 'hex'),
+      new web3.PublicKey(Buffer.from(
+        '1122334455667788990011223344556677889900112233445566778899001122',
+      'hex')),
+      Buffer.from('1122334455667788990011223344556677889900', 'hex'),
       Buffer.from('1122334455667788990011223344556677889900', 'hex'),
       sinstHello,
       accAdmin.publicKey,
@@ -163,7 +197,10 @@ describe('bridge', () => {
     }
 
     const ixReceiveRequest = await bridge.receiveRequest(
-      Buffer.from('1122334455667788990011223344556677889900112233445566778899001122', 'hex'),
+      new web3.PublicKey(Buffer.from(
+        '1122334455667788990011223344556677889900112233445566778899001122',
+      'hex')),
+      Buffer.from('1122334455667788990011223344556677889900', 'hex'),
       Buffer.from('1122334455667788990011223344556677889900', 'hex'),
       sinstInit,
       accAdmin.publicKey,

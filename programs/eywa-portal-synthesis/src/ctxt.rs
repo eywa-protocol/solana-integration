@@ -1,10 +1,6 @@
 use anchor_lang::prelude::*;
 
-
-pub const PDA_MASTER_SEED: &[u8] = b"eywa-pda";
-pub const PDA_MINT_SYNT_SEED: &[u8] = b"mint-synt";
-pub const PDA_MINT_DATA_SEED: &[u8] = b"mint-data";
-pub const PDA_SYNTHESIZE_REQUEST_SEED: &[u8] = b"synthesize-request";
+use crate::state as state;
 
 
 #[derive(Accounts)]
@@ -15,12 +11,12 @@ pub struct Initialize<'info> {
     #[account(
         init,
         payer = owner,
-        seeds = [ PDA_MASTER_SEED.as_ref() ],
+        seeds = [ state::Settings::SEED.as_ref() ],
         bump = bump_seed,
         // space = 8 + 8 + 32 * 50 + 8 + 32 * 250 + 77,
         space = 10000,
     )]
-    pub settings: Account<'info, crate::state::Settings>,
+    pub settings: Account<'info, state::Settings>,
     #[account(mut)]
     pub owner: Signer<'info>,
     pub bridge: AccountInfo<'info>,
@@ -32,10 +28,10 @@ pub struct SetBridge<'info> {
     #[account(
         mut,
         // constraint = &settings.owner == owner.key,
-        seeds = [ PDA_MASTER_SEED.as_ref() ],
+        seeds = [ state::Settings::SEED.as_ref() ],
         bump = settings.bump
     )]
-    pub settings: Account<'info, crate::state::Settings>,
+    pub settings: Account<'info, state::Settings>,
     #[account(mut)]
     pub owner: Signer<'info>,
     pub bridge: AccountInfo<'info>,
@@ -47,10 +43,10 @@ pub struct SetOwner<'info> {
     #[account(
         mut,
         // constraint = &settings.owner == owner.key,
-        seeds = [ PDA_MASTER_SEED.as_ref() ],
+        seeds = [ state::Settings::SEED.as_ref() ],
         bump = settings.bump
     )]
-    pub settings: Account<'info, crate::state::Settings>,
+    pub settings: Account<'info, state::Settings>,
     #[account(mut)]
     pub owner: Signer<'info>,
     pub new_owner: AccountInfo<'info>,
@@ -65,76 +61,233 @@ pub struct SetOwner<'info> {
     synt_decimals: u8,
 )]
 pub struct CreateRepresentation<'info> {
-    #[account(mut)]
-    pub settings: Account<'info, crate::state::Settings>,
+    #[account(
+        mut,
+        // constraint = &settings.owner == owner.key,
+    )]
+    pub settings: Account<'info, state::Settings>,
     #[account(
         init,
-        seeds = [ PDA_MINT_SYNT_SEED.as_ref(), &token_real[..] ],
+        seeds = [
+            state::MintData::SYNT_SEED.as_ref(),
+            token_real.as_ref()
+        ],
         bump = bump_seed_mint,
         mint::decimals = synt_decimals,
-        mint::authority = owner,
+        mint::authority = settings,
         payer = owner,
     )]
     pub mint_synt: Account<'info, anchor_spl::token::Mint>,
     #[account(
         init,
-        seeds = [ PDA_MINT_DATA_SEED.as_ref(), &token_real[..] ],
+        seeds = [
+            state::MintData::DATA_SEED.as_ref(),
+            token_real.as_ref()
+        ],
         bump = bump_seed_data,
         payer = owner,
-        // space = 1000,
         space = 10000,
     )]
-    pub mint_data: Account<'info, crate::state::MintData>,
+    pub mint_data: Account<'info, state::MintData>,
     pub token_program: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
+    // pub pda_signer: AccountInfo<'info>,
     pub owner: Signer<'info>,
 }
 
 #[derive(Accounts)]
 #[instruction(
-    bump_seed_mint: u8,
-    token_real: [u8; 20],
+    bump_mint: u8,
+    bump_request: u8,
 )]
 pub struct MintSyntheticToken<'info> {
-    pub settings: Account<'info, crate::state::Settings>,
+    pub settings: Account<'info, state::Settings>,
     #[account(
         mut,
-        seeds = [ PDA_MINT_SYNT_SEED.as_ref(), &token_real[..] ],
-        bump = bump_seed_mint,
+        seeds = [
+            state::MintData::SYNT_SEED.as_ref(),
+            mint_data.token_real.as_ref()
+        ],
+        bump = mint_data.bump_mint,
     )]
     pub mint_synt: Account<'info, anchor_spl::token::Mint>,
-    #[account(mut, constraint = &to.owner == owner.key)]
+    pub mint_data: ProgramAccount<'info, state::MintData>,
+    #[account(
+        init,
+        seeds = [
+            state::SynthesizeStateData::SEED.as_ref(),
+            mint_data.token_real.as_ref()
+        ],
+        bump = bump_request,
+        payer = owner
+    )]
+    pub synthesize_state: ProgramAccount<'info, state::SynthesizeStateData>,
+    #[account(mut)]
     pub to: Account<'info, anchor_spl::token::TokenAccount>,
-    // #[account(mut)]
-    pub mint_data: ProgramAccount<'info, crate::state::MintData>,
     pub this_program: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
     pub owner: Signer<'info>,
+}
+impl<'info> MintSyntheticToken<'info> {
+    pub fn into_mint_to_context(
+        &self
+    ) -> CpiContext<'_, '_, '_, 'info, anchor_spl::token::MintTo<'info>> {
+        CpiContext::new(
+            self.token_program.clone(),
+            anchor_spl::token::MintTo {
+                mint: self.mint_synt.to_account_info(),
+                to: self.to.to_account_info(),
+                authority: self.settings.to_account_info(),
+            }
+        )
+    }
 }
 
 #[derive(Accounts)]
 pub struct EmergencyUnsyntesizeRequest<'info> {
+    pub settings: Account<'info, state::Settings>,
+    #[account(
+        mut,
+        seeds = [
+            state::SynthesizeStateData::SEED.as_ref(),
+            real_token.key().as_ref()
+        ],
+        bump = synthesize_request.bump,
+    )]
+    pub synthesize_request: ProgramAccount<'info, state::SynthesizeStateData>,
+    pub real_token: Account<'info, anchor_spl::token::Mint>,
     #[account(mut)]
-    pub mint: AccountInfo<'info>,
-    #[account(mut)]
-    pub mint_data: ProgramAccount<'info, crate::state::MintData>,
+    pub bridge_settings: Account<'info, eywa_bridge::state::Settings>,
+    pub bridge_program: Program<'info, eywa_bridge::program::EywaBridge>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
+}
+impl<'info> EmergencyUnsyntesizeRequest<'info> {
+    pub fn into_transmit_request_context(
+        &self
+    ) -> CpiContext<'_, '_, '_, 'info, eywa_bridge::ctxt::TransmitRequest<'info>> {
+        CpiContext::new(
+            self.bridge_program.to_account_info(),
+            eywa_bridge::ctxt::TransmitRequest {
+                signer: self.settings.to_account_info(),
+                settings: self.bridge_settings.clone(),
+                system_program: self.system_program.to_account_info(),
+                rent: self.rent.clone(),
+            },
+        )
+    }
 }
 
 #[derive(Accounts)]
+#[instruction(
+    bump: u8,
+    // token_real: [u8; 20],
+)]
 pub struct BurnSyntheticToken<'info> {
+    pub settings: Account<'info, state::Settings>,
+    #[account(
+        init,
+        seeds = [
+            state::TxState::SEED.as_ref(),
+            mint_synt.key().as_ref()
+        ],
+        bump = bump,
+        payer = client,
+    )]
+    pub tx_state: ProgramAccount<'info, state::TxState>,
+    #[account(
+        mut,
+        seeds = [
+            state::MintData::SYNT_SEED.as_ref(),
+            mint_data.token_real.as_ref()
+        ],
+        bump = mint_data.bump_mint
+    )]
+    pub mint_synt: Account<'info, anchor_spl::token::Mint>,
+    pub mint_data: ProgramAccount<'info, state::MintData>,
+    #[account(signer, mut)]
+    pub client: AccountInfo<'info>,
     #[account(mut)]
-    pub mint: AccountInfo<'info>,
+    pub to: Account<'info, anchor_spl::token::TokenAccount>,
     #[account(mut)]
-    pub mint_data: ProgramAccount<'info, crate::state::MintData>,
+    pub bridge_settings: Account<'info, eywa_bridge::state::Settings>,
+    pub bridge_program: Program<'info, eywa_bridge::program::EywaBridge>,
+    pub token_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
+}
+impl<'info> BurnSyntheticToken<'info> {
+    pub fn into_burn_context(
+        &self
+    ) -> CpiContext<'_, '_, '_, 'info, anchor_spl::token::Burn<'info>> {
+        CpiContext::new(
+            self.bridge_program.to_account_info(),
+            anchor_spl::token::Burn {
+                mint: self.mint_synt.to_account_info(),
+                to: self.to.to_account_info(),
+                authority: self.settings.to_account_info(),
+            },
+        )
+    }
+    pub fn into_transmit_request_context(
+        &self
+    ) -> CpiContext<'_, '_, '_, 'info, eywa_bridge::ctxt::TransmitRequest<'info>> {
+        CpiContext::new(
+            self.bridge_program.to_account_info(),
+            eywa_bridge::ctxt::TransmitRequest {
+                signer: self.settings.to_account_info(),
+                settings: self.bridge_settings.clone(),
+                system_program: self.system_program.to_account_info(),
+                rent: self.rent.clone(),
+            },
+        )
+    }
 }
 
 #[derive(Accounts)]
 pub struct EmergencyUnburn<'info> {
+    pub settings: Account<'info, state::Settings>,
+    #[account(
+        mut,
+        seeds = [
+            state::TxState::SEED.as_ref(),
+            mint_synt.key().as_ref()
+        ],
+        bump = tx_state.bump,
+    )]
+    pub tx_state: ProgramAccount<'info, state::TxState>,
+    #[account(
+        mut,
+        seeds = [
+            state::MintData::SYNT_SEED.as_ref(),
+            mint_data.token_real.as_ref()
+        ],
+        bump = mint_data.bump_mint
+    )]
+    pub mint_synt: Account<'info, anchor_spl::token::Mint>,
+    pub mint_data: ProgramAccount<'info, state::MintData>,
     #[account(mut)]
-    pub mint: AccountInfo<'info>,
-    #[account(mut)]
-    pub mint_data: ProgramAccount<'info, crate::state::MintData>,
+    pub to: Account<'info, anchor_spl::token::TokenAccount>,
+    pub token_program: AccountInfo<'info>,
+
+    pub bridge_signer: Signer<'info>,
+}
+impl<'info> EmergencyUnburn<'info> {
+    pub fn into_mint_to_context(
+        &self
+    ) -> CpiContext<'_, '_, '_, 'info, anchor_spl::token::MintTo<'info>> {
+        CpiContext::new(
+            self.token_program.clone(),
+            anchor_spl::token::MintTo {
+                mint: self.mint_synt.to_account_info(),
+                to: self.to.to_account_info(),
+                authority: self.settings.to_account_info(),
+            }
+        )
+    }
 }
 
 #[derive(Accounts)]
@@ -142,10 +295,12 @@ pub struct CreateRepresentationRequest<'info> {
     #[account(
         mut,
         constraint = &settings.owner == owner.key,
-        seeds = [ PDA_MASTER_SEED.as_ref() ],
+        seeds = [
+            state::Settings::SEED.as_ref()
+        ],
         bump = settings.bump
     )]
-    pub settings: Account<'info, crate::state::Settings>,
+    pub settings: Account<'info, state::Settings>,
     pub real_token: Account<'info, anchor_spl::token::Mint>,
     #[account(mut)]
     pub associated: AccountInfo<'info>,
@@ -162,20 +317,21 @@ pub struct CreateRepresentationRequest<'info> {
     amount: u64,
 )]
 pub struct Synthesize<'info> {
-    // #[account(mut)]
-    pub settings: Account<'info, crate::state::Settings>,
+    #[account(mut)]
+    pub settings: Account<'info, state::Settings>,
     #[account(
         init,
         seeds = [
-            PDA_SYNTHESIZE_REQUEST_SEED.as_ref(),
+            // state::SynthesizeStateData::SEED.as_ref(),
+            state::TxState::SEED.as_ref(),
             real_token.key().as_ref()
         ],
         bump = bump_seed_synthesize_request,
-        // authority = pda_master,
         space = 10000,
         payer = client
     )]
-    pub synthesize_request: ProgramAccount<'info, crate::state::SynthesizeRequestInfo>,
+    pub tx_state: ProgramAccount<'info, state::TxState>,
+    // pub synthesize_request: ProgramAccount<'info, state::SynthesizeStateData>,
     pub real_token: Account<'info, anchor_spl::token::Mint>,
     #[account(
         mut,
@@ -186,7 +342,6 @@ pub struct Synthesize<'info> {
     pub destination: Account<'info, anchor_spl::token::TokenAccount>,
     #[account(signer, mut)]
     pub client: AccountInfo<'info>,
-    pub pda_master: AccountInfo<'info>,
     #[account(mut)]
     pub bridge_settings: Account<'info, eywa_bridge::state::Settings>,
     pub bridge_program: Program<'info, eywa_bridge::program::EywaBridge>,
@@ -203,7 +358,7 @@ impl<'info> Synthesize<'info> {
             anchor_spl::token::Transfer {
                 from: self.source.to_account_info().clone(),
                 to: self.destination.to_account_info().clone(),
-                authority: self.pda_master.clone(),
+                authority: self.settings.to_account_info(),
             },
         )
     }
@@ -213,7 +368,7 @@ impl<'info> Synthesize<'info> {
         CpiContext::new(
             self.bridge_program.to_account_info(),
             eywa_bridge::ctxt::TransmitRequest {
-                signer: self.pda_master.clone(),
+                signer: self.settings.to_account_info(),
                 settings: self.bridge_settings.clone(),
                 system_program: self.system_program.to_account_info(),
                 rent: self.rent.clone(),
@@ -228,16 +383,17 @@ impl<'info> Synthesize<'info> {
 )]
 pub struct EmergencyUnsynthesize<'info> {
     // #[account(mut)]
-    pub settings: Account<'info, crate::state::Settings>,
+    pub settings: Account<'info, state::Settings>,
     #[account(
         mut,
         seeds = [
-            PDA_SYNTHESIZE_REQUEST_SEED.as_ref(),
+            // state::SynthesizeStateData::SEED.as_ref(),
+            state::TxState::SEED.as_ref(),
             real_token.key().as_ref()
         ],
         bump = bump_seed_synthesize_request,
     )]
-    pub synthesize_request: ProgramAccount<'info, crate::state::SynthesizeRequestInfo>,
+    pub tx_state: ProgramAccount<'info, state::TxState>,
     pub real_token: Account<'info, anchor_spl::token::Mint>,
     #[account(mut)]
     pub source: AccountInfo<'info>,
@@ -245,11 +401,8 @@ pub struct EmergencyUnsynthesize<'info> {
     pub destination: AccountInfo<'info>,
     #[account(signer, mut)]
     pub client: AccountInfo<'info>,
-    pub pda_master: AccountInfo<'info>,
     pub bridge_program: Program<'info, eywa_bridge::program::EywaBridge>,
     pub token_program: Program<'info, anchor_spl::token::Token>,
-    // #[account(signer)]
-    // pub bridge: AccountInfo<'info>,
 }
 impl<'info> EmergencyUnsynthesize<'info> {
     pub fn into_transfer_context(
@@ -260,7 +413,7 @@ impl<'info> EmergencyUnsynthesize<'info> {
             anchor_spl::token::Transfer {
                 from: self.source.to_account_info().clone(),
                 to: self.destination.to_account_info().clone(),
-                authority: self.pda_master.clone(),
+                authority: self.settings.to_account_info(),
             },
         )
     }
@@ -269,31 +422,46 @@ impl<'info> EmergencyUnsynthesize<'info> {
 #[derive(Accounts)]
 pub struct Unsynthesize<'info> {
     // #[account(mut)]
-    pub settings: Account<'info, crate::state::Settings>,
+    pub settings: Account<'info, state::Settings>,
+    pub real_token: Account<'info, anchor_spl::token::Mint>,
     #[account(mut)]
-    pub unsynthesize_state: AccountInfo<'info>,
-    #[account(mut, signer)]
-    pub states_master_account: AccountInfo<'info>,
+    pub unsynthesize_state: Account<'info, state::UnsynthesizeStateData>,
+    // #[account(mut, signer)]
+    // pub states_master_account: AccountInfo<'info>,
     #[account(mut)]
-    pub source_account: AccountInfo<'info>,
+    pub source: AccountInfo<'info>,
     #[account(mut)]
-    pub destination_account: AccountInfo<'info>,
-    #[account(signer, mut)]
-    pub owner_account: AccountInfo<'info>,
-    pub spl_token_account: AccountInfo<'info>,
+    pub destination: AccountInfo<'info>,
+    // #[account(signer, mut)]
+    // pub owner_account: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
     pub system_program: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
     #[account(signer)]
     pub bridge: AccountInfo<'info>,
 }
+impl<'info> Unsynthesize<'info> {
+    pub fn into_transfer_context(
+        &self
+    ) -> CpiContext<'_, '_, '_, 'info, anchor_spl::token::Transfer<'info>> {
+        CpiContext::new(
+            self.token_program.to_account_info(),
+            anchor_spl::token::Transfer {
+                from: self.source.to_account_info().clone(),
+                to: self.destination.to_account_info().clone(),
+                authority: self.settings.to_account_info(),
+            },
+        )
+    }
+}
 
 #[derive(Accounts)]
 pub struct EmergencyUnburnRequest<'info> {
     // #[account(mut)]
-    pub settings: Account<'info, crate::state::Settings>,
+    pub settings: Account<'info, state::Settings>,
     #[account(mut)]
-    pub unsynthesize_state: AccountInfo<'info>,
-    //unsynthesize_state: ProgramAccount<'info, UnsynthesizeStatesInfo>,
+    pub unsynthesize_state: Account<'info, state::UnsynthesizeStateData>,
+    //unsynthesize_state: ProgramAccount<'info, UnsynthesizeStateData>,
     #[account(mut, signer)]
     pub states_master_account: AccountInfo<'info>,
     #[account(signer, mut)]
@@ -302,7 +470,7 @@ pub struct EmergencyUnburnRequest<'info> {
     pub bridge_nonce: AccountInfo<'info>,
     #[account(signer)]
     pub message_sender: AccountInfo<'info>,
-    pub pda_master: AccountInfo<'info>,
+    // pub pda_master: AccountInfo<'info>,
     #[account(mut)]
     pub bridge_settings: Account<'info, eywa_bridge::state::Settings>,
     pub bridge_program: Program<'info, eywa_bridge::program::EywaBridge>,
@@ -317,7 +485,7 @@ impl<'info> EmergencyUnburnRequest<'info> {
             self.bridge_program.to_account_info(),
             eywa_bridge::ctxt::TransmitRequest {
                 // signer: self.pda_master.clone(),
-                signer: self.pda_master.clone(),
+                signer: self.settings.to_account_info(),
                 settings: self.bridge_settings.clone(),
                 system_program: self.system_program.to_account_info(),
                 rent: self.rent.clone(),

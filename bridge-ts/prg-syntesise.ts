@@ -4,43 +4,28 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { BN, Idl, web3 } from "@project-serum/anchor";
-// import StubWallet from "./stub-wallet";
 
 import { Bridge } from "./prg-bridge";
 // import { Logger } from '../utils-ts';
-
 import { Base } from "./prg-base";
 
-// type UInt256 = Buffer;
-type UInt160 = Buffer;
-type HexUInt160 = string;
+import type {
+  IMintDataAccount,
+  IPortalSyntesizeSettingsAccount,
+  ISynthesizeRequest,
+  ITxStateAccount,
+} from "./interfaces";
+import type { UInt160 } from "./interfaces/types";
 
-export interface ISyntesiseSettings {
-  owner: web3.PublicKey;
-  syntTokens: web3.PublicKey[];
-}
-
-export interface ISynthesizeRequest {
-  //
-}
-
-export interface ISynthesizeRequestEvent {
-  //
-}
-
-export interface IMintData {
-  tokenReal: HexUInt160, // [u8; 20],
-  tokenSynt: web3.PublicKey,
-  name: String,
-  symbol: String,
-}
 
 const allowOwnerOffCurve = true;
 
 const seedMint = Buffer.from("mint-synt", "utf-8");
 const seedData = Buffer.from("mint-data", "utf-8");
 const seedPDA = Buffer.from("eywa-pda", "utf-8");
-const seedSyntReq = Buffer.from("synthesize-request", "utf-8");
+const seedTxState = Buffer.from("eywa-tx-state", "utf-8");
+const seedSyntReq = Buffer.from("eywa-synthesize-state", "utf-8");
+
 
 export class Syntesise extends Base {
   // private logger = new Logger();
@@ -80,21 +65,35 @@ export class Syntesise extends Base {
   }
 
   public async findSynthesizeRequestAddress(
-    pubToken: web3.PublicKey
+    pubToken: web3.PublicKey,
     // ???
   ): Promise<[web3.PublicKey, number]> {
     return this.findProgramAddress([seedSyntReq, pubToken.toBuffer()]);
   }
 
   public async getSynthesizeRequestAddress(
-    pubToken: web3.PublicKey
+    pubToken: web3.PublicKey,
     // ???
   ): Promise<web3.PublicKey> {
     return this.getProgramAddress([seedSyntReq, pubToken.toBuffer()]);
   }
 
+  public async findTxStateAddress(
+    pubToken: web3.PublicKey,
+    // ???
+  ): Promise<[web3.PublicKey, number]> {
+    return this.findProgramAddress([seedTxState, pubToken.toBuffer()]);
+  }
+
+  public async getTxStateAddress(
+    pubToken: web3.PublicKey,
+    // ???
+  ): Promise<web3.PublicKey> {
+    return this.getProgramAddress([seedTxState, pubToken.toBuffer()]);
+  }
+
   public async getAssociatedTokenAddress(
-    pubToken: web3.PublicKey
+    pubToken: web3.PublicKey,
   ): Promise<web3.PublicKey> {
     return Token.getAssociatedTokenAddress(
       ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -106,41 +105,37 @@ export class Syntesise extends Base {
   }
 
   public async getSyntMintAddress(
-    realToken: HexUInt160
+    realToken: UInt160,
   ): Promise<web3.PublicKey> {
-    const bufRealToken: UInt160 = Buffer.from(realToken, "hex");
-    return this.getProgramAddress([seedMint, bufRealToken]);
+    return this.getProgramAddress([seedMint, realToken]);
   }
 
   public async findSyntMintAddress(
-    realToken: HexUInt160
+    realToken: UInt160,
   ): Promise<[web3.PublicKey, number]> {
-    const bufRealToken: UInt160 = Buffer.from(realToken, "hex");
-    return this.findProgramAddress([seedMint, bufRealToken]);
+    return this.findProgramAddress([seedMint, realToken]);
   }
 
   public async getSyntDataAddress(
-    realToken: HexUInt160
+    realToken: UInt160,
   ): Promise<web3.PublicKey> {
-    const bufRealToken: UInt160 = Buffer.from(realToken, "hex");
-    return this.getProgramAddress([seedData, bufRealToken]);
+    return this.getProgramAddress([seedData, realToken]);
   }
 
   public async findSyntDataAddress(
-    realToken: HexUInt160
+    realToken: UInt160,
   ): Promise<[web3.PublicKey, number]> {
-    const bufRealToken: UInt160 = Buffer.from(realToken, "hex");
-    return this.findProgramAddress([seedData, bufRealToken]);
+    return this.findProgramAddress([seedData, realToken]);
   }
 
-  public async fetchSettings(): Promise<ISyntesiseSettings> {
-    const [pubSettings, bump] = await this.findSettingsAddress();
+  public async fetchSettings(): Promise<IPortalSyntesizeSettingsAccount> {
+    const pubSettings = await this.getSettingsAddress();
     const settings = await this.program.account.settings.fetch(pubSettings);
-    return settings as ISyntesiseSettings;
+    return settings as IPortalSyntesizeSettingsAccount;
   }
 
   public async fetchSynthesizeRequestAccountInfo(
-    pubToken: web3.PublicKey
+    pubToken: web3.PublicKey,
   ): Promise<web3.AccountInfo<Buffer>> {
     return this.connection.getAccountInfo(
       await this.getSynthesizeRequestAddress(pubToken)
@@ -148,32 +143,40 @@ export class Syntesise extends Base {
   }
 
   public async fetchSynthesizeRequest(
-    pubToken: web3.PublicKey
+    pubToken: web3.PublicKey,
   ): Promise<ISynthesizeRequest> {
-    return this.program.account.synthesizeRequestInfo.fetch(
+    return this.program.account.synthesizeRequest.fetch(
       await this.getSynthesizeRequestAddress(pubToken)
-    );
+    ) as Promise<ISynthesizeRequest>;
+  }
+
+  public async fetchTxState(
+    pubToken: web3.PublicKey,
+  ): Promise<ITxStateAccount> {
+    return this.program.account.txState.fetch(
+      await this.getTxStateAddress(pubToken)
+    ) as Promise<ITxStateAccount>;
   }
 
   public async fetchSyntData(
     pubSyntData: web3.PublicKey,
-  ): Promise<IMintData> {
+  ): Promise<IMintDataAccount> {
     const data = await this.program.account.mintData.fetch(pubSyntData);
     const { tokenReal } = data as { tokenReal: Uint8Array };
     return {
       ...data,
-      tokenReal: Buffer.from(tokenReal).toString('hex'),
-    } as IMintData;
+      tokenReal: Buffer.from(tokenReal),
+    } as IMintDataAccount;
   }
 
-  public async fetchSyntDataByReal(realToken: HexUInt160): Promise<IMintData> {
-    return this.fetchSyntData(
-      await this.getSyntDataAddress(realToken),
-    );
+  public async fetchSyntDataByReal(
+    realToken: UInt160,
+  ): Promise<IMintDataAccount> {
+    return this.fetchSyntData(await this.getSyntDataAddress(realToken));
   }
 
   public async init(
-    pubPayer: web3.PublicKey
+    pubPayer: web3.PublicKey,
   ): Promise<web3.TransactionInstruction> {
     const [pdaSettings, bumpSettings] = await this.findSettingsAddress();
 
@@ -222,8 +225,8 @@ export class Syntesise extends Base {
     syntName: string,
     syntShortName: string,
     decimals: number,
-    realToken: HexUInt160,
-    owner: web3.PublicKey
+    realToken: UInt160,
+    owner: web3.PublicKey,
   ): Promise<web3.TransactionInstruction> {
     const pubSettings = await this.getSettingsAddress();
 
@@ -292,15 +295,17 @@ export class Syntesise extends Base {
     // payer: web3.Signer,
     // accUser: web3.Keypair,
     pubUser: web3.PublicKey,
-    pubSource: web3.PublicKey
+    pubSource: web3.PublicKey,
   ): Promise<web3.TransactionInstruction> {
     const pubSettings = await this.getSettingsAddress();
-    const [pubSynthesizeRequest, bumpSynthesizeRequest] =
-      await this.findSynthesizeRequestAddress(pubToken);
+    // const [pubSynthesizeRequest, bumpSynthesizeRequest] =
+    const [pubTxState, bumpTxState] =
+      await this.findTxStateAddress(pubToken);
 
     const accounts = {
       settings: pubSettings,
-      synthesizeRequest: pubSynthesizeRequest,
+      // synthesizeRequest: pubSynthesizeRequest,
+      txState: pubTxState,
       realToken: pubToken,
       source: pubSource,
       destination: await this.getAssociatedTokenAddress(pubToken),
@@ -314,7 +319,7 @@ export class Syntesise extends Base {
     };
 
     const ixSynthesize = await this.program.instruction.synthesize(
-      bumpSynthesizeRequest,
+      bumpTxState,
       new BN(amount),
       chainToAddress,
       receiveSide,
@@ -328,28 +333,28 @@ export class Syntesise extends Base {
   public async emergencyUnsynthesize(
     pubToken: web3.PublicKey,
     pubUser: web3.PublicKey,
-    pubUserAssociatedTokenAddress: web3.PublicKey
+    pubUserAssociatedTokenAddress: web3.PublicKey,
   ): Promise<web3.TransactionInstruction> {
     const pubSettings = await this.getSettingsAddress();
-    const [pubSynthesizeRequest, bumpSynthesizeRequest] =
-      await this.findSynthesizeRequestAddress(pubToken);
+    const [pubTxState, bumpTxState] =
+      await this.findTxStateAddress(pubToken);
 
     const accounts = {
       settings: pubSettings,
-      synthesizeRequest: pubSynthesizeRequest,
+      txState: pubTxState,
       realToken: pubToken,
       client: pubUser,
       source: await this.getAssociatedTokenAddress(pubToken),
       destination: pubUserAssociatedTokenAddress,
-      bridgeSettings: await this.bridge.getSettingsAddress(),
+      // bridgeSettings: await this.bridge.getSettingsAddress(),
       bridgeProgram: this.bridge.pid,
-      pdaMaster: pubSettings,
+      // pdaMaster: pubSettings,
       tokenProgram: TOKEN_PROGRAM_ID,
     };
 
     const ixEmergencyUnsynthesize =
       await this.program.instruction.emergencyUnsynthesize(
-        bumpSynthesizeRequest,
+        bumpTxState,
         { accounts }
       );
     return ixEmergencyUnsynthesize;

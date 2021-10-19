@@ -22,6 +22,7 @@ import BridgeFactory, { SolanaHelper } from '../../bridge-ts';
 import { BridgeUserClient } from '../../bridge-ts/bridge-user-client';
 
 import { Logger } from '../../utils-ts';
+import { utf8 } from '@project-serum/anchor/dist/cjs/utils/bytes';
 
 
 const logger = new Logger();
@@ -76,6 +77,17 @@ export const MintSyntheticTokenTests = ({
     ], program.programId);
     logger.logPublicKey('pubkeyData', pubkeyData);
 
+    const [
+      pubSynthesizeState,
+      bumpSynthesizeState,
+    ] = await PublicKey.findProgramAddress([
+      Buffer.from('eywa-synthesize-state', 'utf-8'),
+      Buffer.from(realToken, 'hex'),
+    ], program.programId);
+    logger.logPublicKey('pubSynthesizeState', pubSynthesizeState);
+    // logger.log('Buffer.from', Buffer.from('eywa-synthesize-request', 'utf-8').toString('utf8'));
+    // logger.log('Buffer.from', Buffer.from([101, 121, 119, 97, 45, 115, 121, 110, 116, 104, 101, 115, 105, 122, 101, 45, 115, 116, 97, 116, 101]).toString('utf8'));
+
     const mintAccount = new Token(
       program.provider.connection,
       pubkeyMint,
@@ -91,23 +103,26 @@ export const MintSyntheticTokenTests = ({
 
     const ixMintSyntheticToken = await program.instruction.mintSyntheticToken(
       bumpSeedMint, // : u8,
+      bumpSynthesizeState, // : u8,
       // bumpSeedData, // : u8,
-      new BN(realToken, 16).toArray(), // U160
-      new BN(txId, 16).toArray(), // H256
+      // new BN(realToken, 16).toArray(), // U160
+      // new BN(txId, 16).toArray(), // H256
       new BN(3), // amount
       // 'Some Synt Name', // synt name
       // 'SSN', // synt short name
     {
       accounts: {
         settings: await main.getSettingsAddress(),
+        synthesizeState: pubSynthesizeState,
         to: walUser, // accTo.publicKey,
         mintSynt: pubkeyMint,
         mintData: pubkeyData,
         thisProgram: program.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
-        // systemProgram: anchor.web3.SystemProgram.programId,
-        // rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: web3.SystemProgram.programId,
+        rent: web3.SYSVAR_RENT_PUBKEY,
         owner: accAdmin.publicKey,
+        // bridgeSigner: accAdmin.publicKey,
       },
     });
 
@@ -132,7 +147,7 @@ export const MintSyntheticTokenTests = ({
     console.log(await program.account.mintData.fetch(pubkeyData));
 
     const settings = await main.fetchSettings();
-    console.log('settings');
+    console.log('settings IPortalSyntesizeSettings');
     console.log(settings);
 
     logger.logPublicKey('TOKEN_PROGRAM_ID', TOKEN_PROGRAM_ID);
@@ -141,7 +156,7 @@ export const MintSyntheticTokenTests = ({
     (await client.fetchAllUserTokenAccountInfos(accAdmin.publicKey))
     .forEach(b => console.log(b));
 
-    console.log('balances');
+    console.log('balances { [publickey: string]: u64 }');
     console.log(await client.fetchAllUserTokenBalances(accAdmin.publicKey));
   });
 });

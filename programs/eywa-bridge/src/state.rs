@@ -5,11 +5,6 @@ use anchor_lang::{
 
 /*
 #[account]
-pub struct ContractBind {
-    pub sender_side: [u8; 20],
-}
-
-#[account]
 #[derive(Default)]
 pub struct BridgeNonce {
     pub nonce: u64,
@@ -23,6 +18,34 @@ pub struct Settings {
     pub nonce: u64,
     pub bump: u8,
 }
+impl Settings {
+    pub const SEED: &'static [u8] = b"eywa-pda";
+    pub const LEN: usize = 8 + 32 + 8 + 1;
+}
+
+#[account]
+#[derive(Default)]
+pub struct ContractSendBind {
+    pub opposite_bridge: [u8; 20],
+    pub contract: Pubkey,
+    pub sender_authority: Pubkey,
+    pub sender_authority_bump: u8,
+}
+impl ContractSendBind {
+    pub const SEED: &'static [u8] = b"eywa-send-bind";
+}
+
+
+#[account]
+#[derive(Default)]
+pub struct ContractReceiveBind {
+    pub opposite_bridge: [u8; 20],
+    pub contract: [u8; 20],
+}
+impl ContractReceiveBind {
+    pub const SEED: &'static [u8] = b"eywa-receive-bind";
+}
+
 
 #[derive(
     AnchorSerialize,

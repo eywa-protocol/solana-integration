@@ -1,4 +1,4 @@
-export { StandaloneInstruction, TransactionAccount } from './prg-bridge';
+// export { StandaloneInstruction, TransactionAccount } from './prg-bridge';
 
 import { Bridge } from './prg-bridge';
 import { Syntesise } from './prg-syntesise';
@@ -56,7 +56,12 @@ class Factory {
   public get main(): Syntesise {
     if ( !this._main ) {
       checkPid(idl.main, pid.main);
-      this._main = new Syntesise(this.connection, pid.main, idl.main, this.bridge);
+      this._main = new Syntesise(
+        this.connection,
+        pid.main,
+        idl.main,
+        this.bridge,
+      );
     }
 
     return this._main;

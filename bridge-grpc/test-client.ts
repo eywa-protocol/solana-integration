@@ -37,29 +37,6 @@ function main() {
     user = "world";
   }
 
-  /*
-  type uint256 = {
-    id_0 : number,
-    id_1 : number,
-    id_2 : number,
-    id_3 : number,
-  };
-
-  type uint160 = {
-    id_0 : number,
-    id_1 : number,
-    id_2 : number,
-  }
-
-  type reqSynt = {
-    id: uint256,
-    from: uint256,
-    to: uint256,
-    amount : number,
-    real_token: uint256,
-  };
-  */
-
   client.sayHello({ name: user }, function (err, response) {
     if (err) {
       console.log("Error:", err);

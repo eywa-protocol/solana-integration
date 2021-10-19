@@ -1,4 +1,7 @@
-import { assert, expect } from 'chai';
+import {
+  // assert,
+  expect,
+} from 'chai';
 
 import {
   BN,
@@ -79,7 +82,7 @@ describe('eywa-bridge-solana', () => {
       'Some Synt Name', // synt name
       'SSN', // synt short name
       2, // decimals
-      /* 0x */'1234567890123456789012345678901234567890', // token_real: [u8; 20]
+      /* 0x */ Buffer.from('1234567890123456789012345678901234567890', 'hex'), // token_real: [u8; 20]
       accAdmin.publicKey,
     );
 

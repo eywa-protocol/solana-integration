@@ -35,7 +35,9 @@ export const CreateRepresentationTests = ({
 
   const CREATE_NEW_REPRESENTATION = 'create new representation';
   it(`should ${ CREATE_NEW_REPRESENTATION }`, async () => {
-    const realToken = /* 0x */"1234567890123456789012345678901234567890";
+    const realToken = Buffer.from(
+      /* 0x */'1234567890123456789012345678901234567890',
+    'hex');
 
     const ixCreateRepresentation = await main.createRepresentation(
       'Some Synt Name', // synt name
@@ -69,7 +71,7 @@ export const CreateRepresentationTests = ({
 
     const client = new BridgeUserClient(provider.connection);
     const representations = await client.getListRepresentation();
-    console.log('representations');
+    console.log('representations IMintData[]');
     console.log(representations);
   });
 });

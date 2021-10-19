@@ -32,27 +32,27 @@
       "name": "receiveRequest",
       "accounts": [
         {
+          "name": "settings",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "requestId",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "proposer",
           "isMut": false,
           "isSigner": true
+        },
+        {
+          "name": "contractBind",
+          "isMut": false,
+          "isSigner": false
         }
       ],
       "args": [
-        {
-          "name": "reqId",
-          "type": {
-            "array": [
-              "u8",
-              32
-            ]
-          }
-        },
-        {
-          "name": "sinst",
-          "type": {
-            "defined": "StandaloneInstruction"
-          }
-        },
         {
           "name": "bridgeFrom",
           "type": {
@@ -60,6 +60,12 @@
               "u8",
               20
             ]
+          }
+        },
+        {
+          "name": "sinst",
+          "type": {
+            "defined": "StandaloneInstruction"
           }
         }
       ]
@@ -116,6 +122,101 @@
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "addContractSendBind",
+      "accounts": [
+        {
+          "name": "settings",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "contractBind",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "bindAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "contract",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "oppositeBridge",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "addContractReceiveBind",
+      "accounts": [
+        {
+          "name": "settings",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "contractBind",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "bump",
+          "type": "u8"
+        },
+        {
+          "name": "oppositeBridge",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "contract",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        }
+      ]
     }
   ],
   "accounts": [
@@ -135,6 +236,61 @@
           {
             "name": "bump",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ContractSendBind",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "oppositeBridge",
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          },
+          {
+            "name": "contract",
+            "type": "publicKey"
+          },
+          {
+            "name": "senderAuthority",
+            "type": "publicKey"
+          },
+          {
+            "name": "senderAuthorityBump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ContractReceiveBind",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "oppositeBridge",
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          },
+          {
+            "name": "contract",
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
           }
         ]
       }
@@ -242,12 +398,7 @@
       "fields": [
         {
           "name": "reqId",
-          "type": {
-            "array": [
-              "u8",
-              32
-            ]
-          },
+          "type": "publicKey",
           "index": false
         },
         {
@@ -256,11 +407,21 @@
           "index": false
         },
         {
-          "name": "txId",
+          "name": "bridgeFrom",
           "type": {
             "array": [
               "u8",
-              32
+              20
+            ]
+          },
+          "index": false
+        },
+        {
+          "name": "senderSide",
+          "type": {
+            "array": [
+              "u8",
+              20
             ]
           },
           "index": false
@@ -273,6 +434,11 @@
       "code": 5300,
       "name": "UnknownBridgeError",
       "msg": "Unknown Bridge Error"
+    },
+    {
+      "code": 5301,
+      "name": "UntrustedContract",
+      "msg": "UNTRUSTED CONTRACT"
     }
   ],
   "metadata": {

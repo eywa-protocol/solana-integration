@@ -5,8 +5,8 @@ import gastank from '../target/idl/eywa_gas_tank.json';
 import main from '../target/idl/eywa_portal_synthesis.json';
 
 import type { Idl } from '@project-serum/anchor';
+import type { Base58PublicKey } from '../bridge-ts/interfaces/types';
 
-type Base58PublicKey = string;
 type IdlMeta = { address: Base58PublicKey };
 export type IdlDeployed = Idl & { metadata?: IdlMeta };
 

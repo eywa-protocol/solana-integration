@@ -17,13 +17,14 @@ use anchor_lang::{
 #[event]
 pub struct BurnRequest {
     #[index]
-    pub id: [u8; 32], //uint256
+    pub id: Pubkey, // [u8; 32], //uint256
     #[index]
     pub from: Pubkey, //uint256
     #[index]
-    pub to: Pubkey,
+    pub to: [u8; 20],
     pub amount: u64,
-    pub token: [u8; 20], //uint160
+    // pub token: [u8; 20], //uint160
+    pub token: Pubkey, //uint160
 }
 
 /*
@@ -35,7 +36,7 @@ pub struct BurnRequest {
 #[event]
 pub struct RevertSynthesizeRequest {
     #[index]
-    pub id: [u8; 32],
+    pub id: Pubkey, // [u8; 32],
     #[index]
     pub to: Pubkey,
 }
@@ -51,7 +52,7 @@ pub struct RevertSynthesizeRequest {
 #[event]
 pub struct SynthesizeCompleted {
     #[index]
-    pub id: [u8; 32],
+    pub id: Pubkey,
     #[index]
     pub to: Pubkey,
     pub amount: u64,
@@ -69,11 +70,11 @@ pub struct SynthesizeCompleted {
 #[event]
 pub struct RevertBurnCompleted {
     #[index]
-    pub id: [u8; 32],
+    pub id: Pubkey,
     #[index]
     pub to: Pubkey,
     pub amount: u64,
-    pub token: [u8; 20],
+    pub token: Pubkey, // [u8; 20],
 }
 
 /*
@@ -127,7 +128,7 @@ pub struct ApprovedRepresentationRequest {
 #[event]
 pub struct SynthesizeRequest {
     #[index]
-    pub id: Pubkey, // H256, // id for repley protection
+    pub id: Pubkey, // H256, // id for replay protection
     #[index]
     pub from: Pubkey, // msgSender
     #[index]
@@ -145,7 +146,7 @@ pub struct SynthesizeRequest {
 #[event]
 pub struct RevertBurnRequest {
     #[index]
-    pub id: String,
+    pub id: Pubkey,
     #[index]
     pub to: Pubkey,
 }
@@ -161,7 +162,7 @@ pub struct RevertBurnRequest {
 #[event]
 pub struct BurnCompleted {
     #[index]
-    pub id: String,
+    pub id: Pubkey,
     #[index]
     pub to: Pubkey,
     pub amount: u64,

@@ -3,7 +3,7 @@
 .PHONY: test start-solana
 
 install-solana:
-	sh -c "$(curl -sSfL https://release.solana.com/v1.7.8/install)"
+	sh -c "$(curl -sSfL https://release.solana.com/v1.7.11/install)"
 	. $HOME/.profile
 
 start-solana:

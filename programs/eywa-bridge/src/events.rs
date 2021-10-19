@@ -31,12 +31,15 @@ pub struct OracleRequest {
     event ReceiveRequest(
         bytes32 reqId,
         address receiveSide,
-        bytes32 tx
+        address bridgeFrom,
+        address senderSide
     );
 */
 #[event]
 pub struct ReceiveRequest {
-    pub req_id: [u8; 32],
+    pub req_id: Pubkey,
     pub receive_side: Pubkey,
-    pub tx_id: [u8; 32],
+    // pub tx_id: Pubkey,
+    pub bridge_from: [u8; 20],
+    pub sender_side: [u8; 20],
 }

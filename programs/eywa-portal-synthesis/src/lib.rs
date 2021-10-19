@@ -2,7 +2,7 @@ use anchor_lang::{
     Key,
     prelude::*,
     solana_program::{
-        keccak,
+        // keccak,
         program_error::ProgramError,
     },
     AnchorSerialize,
@@ -15,7 +15,6 @@ pub mod events;
 pub mod state;
 pub mod ctxt;
 
-use state::*;
 use ctxt::*;
 
 
@@ -25,28 +24,17 @@ declare_id!("7gRLkKiavHbYX29kjPrm2jXcrFYYEKZUrNUxmBTMBDtU");
 #[program]
 pub mod eywa_portal_synthesis {
     use super::*;
-    use eywa_lib::get_or_create_account_data;
 
-    // constructor
     pub fn initialize(
         ctx: Context<Initialize>,
         bump_seed: u8,
     ) -> ProgramResult {
-        // msg!(
-        //     "Settings::default().try_to_vec().unwrap().len(): {}",
-        //     Settings::default().try_to_vec().unwrap().len(),
-        // );
-        // msg!(
-        //     "initialize: real_tokens.count: {}",
-        //     ctx.accounts.settings.real_tokens.iter().count(),
-        // );
-
         ctx.accounts.settings.owner = ctx.accounts.owner.key();
-        ctx.accounts.settings.portal_nonce = 0;
+        ctx.accounts.settings.synthesis_request_count = 0;
+        ctx.accounts.settings.portal_request_count = 0;
         ctx.accounts.settings.bridge = ctx.accounts.bridge.key();
         ctx.accounts.settings.bump = bump_seed;
 
-        // ProgramResult::Err(ErrorCode::UnknownError.into())
         Ok(())
     }
 
@@ -80,37 +68,45 @@ pub mod eywa_portal_synthesis {
     // can called only by bridge after initiation on a second chain
     pub fn mint_synthetic_token(
         ctx: Context<MintSyntheticToken>,
-        _bump_seed_mint: u8,
-        token_real: [u8; 20], // real token for synt
-        tx_id: [u8; 32],   // H256, // id for replay protection
+        _bump_mint: u8,
+        _bump_request: u8,
         amount: u64, // от 0 до 18 446 744 073 709 551 615
-        // to: Pubkey, // destination for minting synt
     ) -> ProgramResult {
+        let seeds = &[
+            state::Settings::SEED.as_ref(),
+            &[ctx.accounts.settings.bump],
+        ];
+
         // TODO add chek to Default - чтобы не было по бриджу
+        /*
+        if ctx.accounts.bridge_signer.key() != ctx.accounts.settings.bridge_signer {
+            return ProgramResult::Err(ErrorCode::OnlyBridge.into());
+        }
+        */
         // require(
         //     synthesizeStates[_txID] == SynthesizeState.Default,
         //     "Synt: emergencyUnsynthesizedRequest called or tokens has been already synthesized"
         // );
+        /*
+        if ctx.accounts.synthesize_request { // checked by Anchor 'init' account
+            // "Synt: emergencyUnsynthesizedRequest called or tokens has been already synthesized"
+            return ProgramResult::Err(ErrorCode::OnlyBridge.into());
+        }
+        */
+        token::mint_to(
+            ctx.accounts.into_mint_to_context()
+            .with_signer(&[&seeds[..]]),
+            amount,
+        )?;
 
-        let cpi_ctx = CpiContext::new(
-            ctx.accounts.token_program.clone(),
-            token::MintTo {
-                mint: ctx.accounts.mint_synt.to_account_info(),
-                to: ctx.accounts.to.to_account_info(),
-                // authority: ctx.accounts.this_program.clone(),
-                authority: ctx.accounts.owner.to_account_info(),
-            }
-        );
-        token::mint_to(cpi_ctx, amount)?;
-
-        // TODO state
         // synthesizeStates[_txID] = SynthesizeState.Synthesized;
+        ctx.accounts.synthesize_state.state = crate::state::SynthesizeState::Synthesized;
 
         emit!(events::SynthesizeCompleted {
-            id: tx_id,
+            id: ctx.accounts.synthesize_state.key(),
             to: ctx.accounts.to.key(),
             amount,
-            token: token_real,
+            token: ctx.accounts.mint_data.token_real,
         });
 
         Ok(())
@@ -120,14 +116,20 @@ pub mod eywa_portal_synthesis {
     // Revert synthesize() operation, can be called several times
     pub fn emergency_unsyntesize_request(
         ctx: Context<EmergencyUnsyntesizeRequest>,
-        tx_id: [u8; 32],   // H256, // id for replay protection
     ) -> ProgramResult {
-        let token_real = ctx.accounts.mint_data.token_real;
+        let token_real = ctx.accounts.real_token.key();
+        let tx_id = ctx.accounts.synthesize_request.key();
+
         let message = format!(
             "EmergencyUnsyntesizeRequest: tx_id={:?}, token_real={:?}",
             tx_id, token_real,
         );
         msg!("{}", message);
+
+        let seeds = &[
+            &crate::state::Settings::SEED[..],
+            &[ctx.accounts.settings.bump],
+        ];
 
         /*
         require(synthesizeStates[_txID]!= SynthesizeState.Synthesized, "Synt: syntatic tokens already minted");
@@ -135,9 +137,23 @@ pub mod eywa_portal_synthesis {
         bytes memory out  = abi.encodeWithSelector(bytes4(keccak256(bytes('emergencyUnsynthesize(bytes32)'))),_txID);
         // TODO add payment by token
         IBridge(bridge).transmitRequestV2(out,_receiveSide, _oppositeBridge, _chainID);
-
-        emit RevertSynthesizeRequest(_txID, _msgSender());
         */
+        eywa_bridge::cpi::transmit_request(
+            ctx.accounts.into_transmit_request_context()
+            .with_signer(&[&seeds[..]]),
+            (&[
+                crate::state::PortalBridgeMethod::EmergencyUnsynthesize as u8,
+            ]).to_vec(), // &[ 1, 2, 3 ], // &out,
+            ctx.accounts.synthesize_request.chain_to_address,
+            ctx.accounts.synthesize_request.opposite_bridge,
+            ctx.accounts.synthesize_request.chain_id,
+        )?;
+
+        // emit RevertSynthesizeRequest(_txID, _msgSender());
+        emit!(events::RevertSynthesizeRequest {
+            id: tx_id,
+            to: ctx.accounts.synthesize_request.recipient,
+        });
 
         Ok(())
     }
@@ -146,17 +162,33 @@ pub mod eywa_portal_synthesis {
     // sToken -> Token on a second chain
     pub fn burn_synthetic_token(
         ctx: Context<BurnSyntheticToken>,
-        tx_id: [u8; 32],   // H256, // id for replay protection
+        bump: u8,
         amount: u64,
-        // chain2address ???
-        // moved to ctx.accounts.mint_data // token_real: [u8; 20], // real token for synt
+        chain_to_address: [u8; 20],
+        opposite_bridge: [u8; 20],
+        chain_id: u64,
     ) -> ProgramResult {
-        let token_real = ctx.accounts.mint_data.token_real;
-        let message = format!(
-            "BurnSyntheticToken: tx_id={:?}, token_real={:?}",
-            tx_id, token_real,
-        );
-        msg!("{}", message);
+        let tx_id = ctx.accounts.tx_state.key();
+
+        let seeds = &[
+            &crate::state::Settings::SEED[..],
+            &[ctx.accounts.settings.bump],
+        ];
+
+        token::burn(
+            ctx.accounts.into_burn_context()
+            .with_signer(&[&seeds[..]]),
+            amount,
+        )?;
+
+        ctx.accounts.tx_state.recipient = ctx.accounts.client.key();
+        ctx.accounts.tx_state.chain_to_address = chain_to_address;
+        ctx.accounts.tx_state.synt_token = ctx.accounts.mint_synt.key();
+        ctx.accounts.tx_state.amount = amount;
+        ctx.accounts.tx_state.state = crate::state::RequestState::Sent;
+        ctx.accounts.tx_state.opposite_bridge = opposite_bridge;
+        ctx.accounts.tx_state.chain_id = chain_id;
+        ctx.accounts.tx_state.bump = bump;
 
         /*
         ISyntERC20(_stoken).burn(_msgSender(), _amount);
@@ -165,17 +197,31 @@ pub mod eywa_portal_synthesis {
         bytes memory out  = abi.encodeWithSelector(bytes4(keccak256(bytes('unsynthesize(bytes32,address,uint256,address)'))),txID, representationReal[_stoken], _amount, _chain2address);
         // TODO add payment by token
         IBridge(bridge).transmitRequestV2(out, _receiveSide, _oppositeBridge, _chainID);
-        TxState storage txState = requests[txID];
-        txState.recipient    = _msgSender();
-        txState.chain2address    = _chain2address;
-        txState.stoken     = _stoken;
-        txState.amount     = _amount;
-        txState.state = RequestState.Sent;
-
-        requestCount += 1;
-
-        emit BurnRequest(txID, _msgSender(), _chain2address, _amount, _stoken);
         */
+        eywa_bridge::cpi::transmit_request(
+            ctx.accounts.into_transmit_request_context()
+            .with_signer(&[&seeds[..]]),
+            (&[
+                crate::state::PortalBridgeMethod::Unsynthesize as u8,
+            ]).to_vec(), // &[ 1, 2, 3 ], // &out,
+            ctx.accounts.tx_state.chain_to_address,
+            ctx.accounts.tx_state.opposite_bridge,
+            ctx.accounts.tx_state.chain_id,
+        )?;
+
+        // requestCount += 1;
+        ctx.accounts.settings.synthesis_request_count += 1;
+
+
+        // emit BurnRequest(txID, _msgSender(), _chain2address, _amount, _stoken);
+        emit!(events::BurnRequest {
+            id: tx_id,
+            from: ctx.accounts.client.key(), // _msgSender(),
+            to: chain_to_address,
+            amount,
+            token: ctx.accounts.tx_state.synt_token.key(),
+            // token: ctx.accounts.mint_data.token_real,
+        });
 
         Ok(())
     }
@@ -186,23 +232,52 @@ pub mod eywa_portal_synthesis {
     // can called only by bridge after initiation on a second chain
     pub fn emergency_unburn(
         ctx: Context<EmergencyUnburn>,
-        tx_id: [u8; 32],   // H256, // id for replay protection
+        // tx_id: [u8; 32],   // H256, // id for replay protection
     ) -> ProgramResult {
-        let token_real = ctx.accounts.mint_data.token_real;
+        let seeds = &[
+            &crate::state::Settings::SEED[..],
+            &[ctx.accounts.settings.bump],
+        ];
+
+        /*
         let message = format!(
             "EmergencyUnburn: tx_id={:?}, token_real={:?}",
-            tx_id, token_real,
+            tx_id,
+            ctx.accounts.mint_data.token_real,
         );
         msg!("{}", message);
+        */
+
+        if ctx.accounts.bridge_signer.key() != ctx.accounts.settings.bridge_signer {
+            return ProgramResult::Err(ErrorCode::OnlyBridge.into());
+        }
 
         /*
         TxState storage txState = requests[_txID];
-        require(txState.state ==  RequestState.Sent, 'Synt: state not open or tx does not exist');
-        txState.state = RequestState.Reverted; // close
-        ISyntERC20(txState.stoken).mint(txState.recipient, txState.amount);
-
-        emit RevertBurnCompleted(_txID, txState.recipient, txState.amount, txState.stoken);
+        require(
+            txState.state ==  RequestState.Sent,
+            'Synt: state not open or tx does not exist'
+        );
         */
+        if ctx.accounts.tx_state.state != crate::state::RequestState::Sent {
+            return ProgramResult::Err(ErrorCode::StateNotOpen.into());
+        }
+        // txState.state = RequestState.Reverted; // close
+        ctx.accounts.tx_state.state = crate::state::RequestState::Reverted;
+        // ISyntERC20(txState.stoken).mint(txState.recipient, txState.amount);
+        token::mint_to(
+            ctx.accounts.into_mint_to_context()
+            .with_signer(&[&seeds[..]]),
+            ctx.accounts.tx_state.amount,
+        )?;
+
+        // emit RevertBurnCompleted(_txID, txState.recipient, txState.amount, txState.stoken);
+        emit!(events::RevertBurnCompleted {
+            id: ctx.accounts.tx_state.key(),
+            to: ctx.accounts.tx_state.recipient,
+            amount: ctx.accounts.tx_state.amount,
+            token: ctx.accounts.tx_state.synt_token,
+        });
 
         Ok(())
     }
@@ -210,7 +285,7 @@ pub mod eywa_portal_synthesis {
     // createRepresentation onlyOwner
     pub fn create_representation(
         ctx: Context<CreateRepresentation>,
-        _bump_seed_mint: u8,
+        bump_seed_mint: u8,
         _bump_seed_data: u8,
         token_real: [u8; 20],
         _synt_decimals: u8,
@@ -231,6 +306,7 @@ pub mod eywa_portal_synthesis {
         ctx.accounts.mint_data.symbol = synt_symbol;
         ctx.accounts.mint_data.token_real = token_real;
         ctx.accounts.mint_data.token_synt = ctx.accounts.mint_synt.key();
+        ctx.accounts.mint_data.bump_mint = bump_seed_mint;
 
         ctx.accounts.settings.synt_tokens.push(mint_data);
 
@@ -264,7 +340,7 @@ pub mod eywa_portal_synthesis {
         }
 
         let seeds = &[
-            &PDA_MASTER_SEED[..],
+            &crate::state::Settings::SEED[..],
             &[ctx.accounts.settings.bump],
         ];
 
@@ -310,7 +386,7 @@ pub mod eywa_portal_synthesis {
     */
     pub fn synthesize(
         ctx: Context<Synthesize>,
-        _bump_seed_synthesize_request: u8,
+        bump_seed_synthesize_request: u8,
         amount: u64,
         chain_to_address: [u8; 20],
         receive_side: [u8; 20],
@@ -318,7 +394,7 @@ pub mod eywa_portal_synthesis {
         chain_id: u64,
     ) -> ProgramResult {
         let seeds = &[
-            &PDA_MASTER_SEED[..],
+            &crate::state::Settings::SEED[..],
             &[ctx.accounts.settings.bump],
         ];
         /*
@@ -336,7 +412,8 @@ pub mod eywa_portal_synthesis {
         // посчитать внутренний идентификатор
         txID = keccak256(abi.encodePacked(this, requestCount));
         */
-        let tx_id = ctx.accounts.synthesize_request.key();
+        let tx_id = ctx.accounts.tx_state.key();
+        // let tx_id = ctx.accounts.settings.key();
         /*
         // сгенерировать вызов
         bytes memory out  = abi.encodeWithSelector(bytes4(
@@ -354,21 +431,14 @@ pub mod eywa_portal_synthesis {
         eywa_bridge::cpi::transmit_request(
             ctx.accounts.into_transmit_request_context()
             .with_signer(&[&seeds[..]]),
-            (&[ 1, 2, 3 ]).to_vec(), // &[ 1, 2, 3 ], // &out,
+            (&[
+                crate::state::SynthesisBridgeMethod::MintSyntheticToken as u8,
+            ]).to_vec(), // &[ 1, 2, 3 ], // &out,
             receive_side,
             opposite_bridge,
             chain_id,
         )?;
         /*
-        transmit_request(
-            &[ 1, 2, 3 ], // &out,
-            receive_side,
-            opposite_bridge,
-            chain_id,
-            &mut nonce, // &mut bridge_nonce.nonce,
-            ctx.program_id,
-        );
-        // end transmitRequestV2
         TxState storage txState = requests[txID];
         txState.recipient    = _msgSender();
         txState.chain2address    = _chain2address;
@@ -376,20 +446,21 @@ pub mod eywa_portal_synthesis {
         txState.amount     = _amount;
         txState.state = RequestState.Sent;
         */
-        let synthesize_request = &mut ctx.accounts.synthesize_request;
+        // let synthesize_request = &mut ctx.accounts.synthesize_request;
         // synthesize_request.tx_id = tx_id;
-        synthesize_request.recipient = ctx.accounts.source.key();
-        synthesize_request.chain_to_address = chain_to_address;
-        synthesize_request.real_token = ctx.accounts.real_token.key();
-        synthesize_request.amount = amount;
-        synthesize_request.state = RequestState::Sent;
-        /*
-        requestCount +=1;
-        */
-        ctx.accounts.settings.portal_nonce += 1;
-        /*
-        emit events::SynthesizeRequest(txID, _msgSender(), _chain2address, _amount, _token);
-        */
+        ctx.accounts.tx_state.bump = bump_seed_synthesize_request;
+        ctx.accounts.tx_state.recipient = ctx.accounts.source.key();
+        ctx.accounts.tx_state.chain_to_address = chain_to_address;
+        ctx.accounts.tx_state.opposite_bridge = opposite_bridge;
+        ctx.accounts.tx_state.chain_id = chain_id;
+        ctx.accounts.tx_state.synt_token = ctx.accounts.real_token.key(); // ???
+        ctx.accounts.tx_state.amount = amount;
+        ctx.accounts.tx_state.state = crate::state::RequestState::Sent;
+
+        // requestCount +=1;
+        ctx.accounts.settings.portal_request_count += 1;
+
+        // emit events::SynthesizeRequest(txID, _msgSender(), _chain2address, _amount, _token);
         emit!(events::SynthesizeRequest {
             id: tx_id,
             from: ctx.accounts.source.key(),
@@ -425,9 +496,11 @@ pub mod eywa_portal_synthesis {
             return ProgramResult::Err(ProgramError::InvalidAccountData);
         }
         */
-        if *ctx.accounts.destination.key != ctx.accounts.synthesize_request.recipient {
+        // if *ctx.accounts.destination.key != ctx.accounts.synthesize_request.recipient {
+        if *ctx.accounts.destination.key != ctx.accounts.tx_state.recipient {
             msg!("Portal: destination account doesn't match with recipient");
-            msg!("{} {}", *ctx.accounts.destination.key, ctx.accounts.synthesize_request.recipient);
+            // msg!("{} {}", *ctx.accounts.destination.key, ctx.accounts.synthesize_request.recipient);
+            msg!("{} {}", *ctx.accounts.destination.key, ctx.accounts.tx_state.recipient);
             return ProgramResult::Err(ProgramError::InvalidAccountData);
         }
         // if ctx.accounts.synthesize_request.key() != tx_id {
@@ -435,29 +508,32 @@ pub mod eywa_portal_synthesis {
         //     msg!("{:?} {:?}", ctx.accounts.synthesize_request.key(), tx_id);
         //     return ProgramResult::Err(ProgramError::InvalidAccountData);
         // }
-        if ctx.accounts.synthesize_request.state != RequestState::Sent {
+        // if ctx.accounts.synthesize_request.state != crate::state::RequestState::Sent {
+        if ctx.accounts.tx_state.state != crate::state::RequestState::Sent {
             msg!("Portal:state not open or tx does not exist");
             return ProgramResult::Err(ProgramError::InvalidAccountData);
         }
 
-        ctx.accounts.synthesize_request.state = RequestState::Reverted;
+        // // ctx.accounts.synthesize_request.state = crate::state::RequestState::Reverted;
+        ctx.accounts.tx_state.state = crate::state::RequestState::Reverted;
 
         let seeds = &[
-            &PDA_MASTER_SEED[..],
+            &crate::state::Settings::SEED[..],
             &[ctx.accounts.settings.bump],
         ];
 
         token::transfer(
             ctx.accounts.into_transfer_context()
             .with_signer(&[&seeds[..]]),
-            ctx.accounts.synthesize_request.amount, // amount,
+            // ctx.accounts.synthesize_request.amount, // amount,
+            ctx.accounts.tx_state.amount,
         )?;
 
         emit!(events::RevertSynthesizeCompleted {
-            id: ctx.accounts.synthesize_request.key(),
-            to: ctx.accounts.synthesize_request.recipient,
-            amount: ctx.accounts.synthesize_request.amount,
-            token: ctx.accounts.synthesize_request.real_token,
+            id: ctx.accounts.tx_state.key(),
+            to: ctx.accounts.tx_state.recipient,
+            amount: ctx.accounts.tx_state.amount,
+            token: ctx.accounts.tx_state.synt_token,
         });
 
         Ok(())
@@ -480,23 +556,24 @@ pub mod eywa_portal_synthesis {
     */
     pub fn unsynthesize( // BurnCompleted
         ctx: Context<Unsynthesize>,
-        token: Pubkey,
-        tx_id: String,
+        // token: Pubkey,
+        // tx_id: String,
         amount: u64,
     ) -> ProgramResult {
+        let token = ctx.accounts.real_token.key(); // : Pubkey,
+        let tx_id = ctx.accounts.unsynthesize_state.key(); //: String,
         /*
         if *ctx.accounts.bridge.key != ctx.accounts.settings.bridge {
             msg!("Portal: required bridge signature");
             return ProgramResult::Err(ProgramError::InvalidAccountData);
         }
-        */
-        let mut unsynthesize_state: UnsynthesizeStatesInfo = get_or_create_account_data(
+        let mut unsynthesize_state: UnsynthesizeStateData = get_or_create_account_data(
             &ctx.accounts.unsynthesize_state,
-            &ctx.accounts.states_master_account,
+            &ctx.accounts.settings.to_account_info(),
             &ctx.accounts.system_program,
             &ctx.accounts.rent,
             1,
-            tx_id.as_str(),
+            tx_id,
             &[],
             ctx.program_id,
         )?;
@@ -505,26 +582,38 @@ pub mod eywa_portal_synthesis {
             msg!("Portal: syntatic tokens emergencyUnburn");
             return ProgramResult::Err(ProgramError::InvalidArgument);
         }
+        */
 
-        let cpi_accounts = token::Transfer {
-            from: ctx.accounts.source_account.clone(),
-            to: ctx.accounts.destination_account.clone(),
-            authority: ctx.accounts.owner_account.clone(),
-        };
-        let cpi_program = ctx.accounts.spl_token_account.clone();
-        let cpi_ctx = CpiContext::new(
-            cpi_program.clone(),
-            cpi_accounts,
-        );
-        token::transfer(cpi_ctx, amount)?;
+        // let cpi_accounts = token::Transfer {
+        //     from: ctx.accounts.source_account.clone(),
+        //     to: ctx.accounts.destination_account.clone(),
+        //     authority: ctx.accounts.owner_account.clone(),
+        // };
+        // let cpi_program = ctx.accounts.token_program.clone();
+        // let cpi_ctx = CpiContext::new(
+        //     cpi_program.clone(),
+        //     cpi_accounts,
+        // );
+        // token::transfer(cpi_ctx, amount)?;
 
-        unsynthesize_state.state = UnsynthesizeStates::Unsynthesized;
-        unsynthesize_state
-            .serialize(&mut *ctx.accounts.unsynthesize_state.try_borrow_mut_data()?)?;
+        let seeds = &[
+            &crate::state::Settings::SEED[..],
+            &[ctx.accounts.settings.bump],
+        ];
+
+        token::transfer(
+            ctx.accounts.into_transfer_context()
+            .with_signer(&[&seeds[..]]),
+            amount,
+        )?;
+
+        ctx.accounts.unsynthesize_state.state = crate::state::UnsynthesizeState::Unsynthesized;
+        // ctx.accounts.unsynthesize_state
+        //     .serialize(&mut *ctx.accounts.unsynthesize_state.try_borrow_mut_data()?)?;
 
         let event = events::BurnCompleted {
             id: tx_id,
-            to: *ctx.accounts.destination_account.key,
+            to: *ctx.accounts.destination.key,
             amount,
             token,
         };
@@ -551,11 +640,14 @@ pub mod eywa_portal_synthesis {
     */
     pub fn emergency_unburn_request(
         ctx: Context<EmergencyUnburnRequest>,
-        tx_id: String,
+        // tx_id: String,
         receive_side: [u8; 20],
         opposite_bridge: [u8; 20],
         chain_id: u64,
     ) -> ProgramResult {
+        let tx_id = ctx.accounts.unsynthesize_state.key(); //: String,
+
+        /*
         let key = Pubkey::create_with_seed(
             &ctx.accounts.states_master_account.key,
             tx_id.as_str(),
@@ -565,17 +657,19 @@ pub mod eywa_portal_synthesis {
             msg!("Portal: got unsynthesize_state account with another tx_id");
             return ProgramResult::Err(ProgramError::InvalidAccountData);
         }
-        let mut unsynthesize_states_info = UnsynthesizeStatesInfo::try_from_slice(
+        let mut unsynthesize_states_info = UnsynthesizeStateData::try_from_slice(
             *ctx.accounts.unsynthesize_state.data.borrow(),
         )?;
-        if unsynthesize_states_info.state != UnsynthesizeStates::Unsynthesized {
+        if unsynthesize_states_info.state != UnsynthesizeState::Unsynthesized {
             msg!("Portal: Real tokens already transfered");
             return ProgramResult::Err(ProgramError::InvalidAccountData);
         }
-        unsynthesize_states_info.state = UnsynthesizeStates::RevertRequest;
-        unsynthesize_states_info
-            .serialize(&mut *ctx.accounts.unsynthesize_state.try_borrow_mut_data()?)?;
+        */
+        ctx.accounts.unsynthesize_state.state = crate::state::UnsynthesizeState::RevertRequest;
+        // unsynthesize_states_info
+        //     .serialize(&mut *ctx.accounts.unsynthesize_state.try_borrow_mut_data()?)?;
 
+        /*
         let mut hasher = keccak::Hasher::default();
         hasher.hash(b"emergencyUnburn(bytes32)");
         let title = hasher.result().0;
@@ -587,7 +681,6 @@ pub mod eywa_portal_synthesis {
                 .as_slice(),
         );
 
-        /*
         let out = hasher.result().0;
 
         let mut bridge_nonce: BridgeNonce = get_or_create_account_data(
@@ -604,28 +697,20 @@ pub mod eywa_portal_synthesis {
         */
 
         let seeds = &[
-            &PDA_MASTER_SEED[..],
+            &crate::state::Settings::SEED[..],
             &[ctx.accounts.settings.bump],
         ];
 
         eywa_bridge::cpi::transmit_request(
             ctx.accounts.into_transmit_request_context()
             .with_signer(&[&seeds[..]]),
-            (&[ 1, 2, 3 ]).to_vec(), // &[ 1, 2, 3 ], // &out,
+            (&[
+                crate::state::SynthesisBridgeMethod::EmergencyUnburn as u8,
+            ]).to_vec(), // &[ 1, 2, 3 ], // &out,
             receive_side,
             opposite_bridge,
             chain_id,
         )?;
-        /*
-        transmit_request(
-            &out,
-            receive_side,
-            opposite_bridge,
-            chain_id,
-            &mut bridge_nonce.nonce,
-            ctx.program_id,
-        );
-        */
 
         emit!(events::RevertBurnRequest {
             id: tx_id,
@@ -647,12 +732,16 @@ pub enum ErrorCode {
     */
     #[msg("Unknown Error")]
     UnknownError = 2000,
+    #[msg("OnlyBridge access constraint")]
+    OnlyBridge,
     #[msg("Token already registred")]
     TokenAlreadyRegistred,
     #[msg("Unknown Portal Error")]
     UnknownPortalError = 3000,
     #[msg("Unknown Synthesis Error")]
     UnknownSynthesisError = 4000,
+    #[msg("Synt: state not open or tx does not exist")]
+    StateNotOpen,
     /*
     #[msg("Unauthorized")]
     Unauthorized = 2000,

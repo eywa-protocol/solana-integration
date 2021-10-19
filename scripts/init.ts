@@ -2,11 +2,9 @@ import { BN, Provider, web3 } from "@project-serum/anchor";
 
 import StubWallet from "../bridge-ts/stub-wallet";
 
-import BridgeFactory, {
-  SolanaHelper,
-  StandaloneInstruction,
-  TransactionAccount,
-} from '../bridge-ts';
+import BridgeFactory, { SolanaHelper } from '../bridge-ts';
+
+import type { StandaloneInstruction, TransactionAccount } from '../bridge-ts/interfaces';
 
 import keyAdmin from '../keys/admin-keypair.json';
 
@@ -47,7 +45,9 @@ async function initMain(
   }
 
   const ixReceiveRequest = await factory.bridge.receiveRequest(
-    Buffer.from('1122334455667788990011223344556677889900112233445566778899001122', 'hex'),
+    new web3.PublicKey(Buffer.from(
+      '1122334455667788990011223344556677889900112233445566778899001122',
+    'hex')),
     Buffer.from('1122334455667788990011223344556677889900', 'hex'),
     sinstInit,
     accAdmin.publicKey,

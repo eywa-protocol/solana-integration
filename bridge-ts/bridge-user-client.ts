@@ -8,13 +8,12 @@ import {
 import BridgeFactory from './';
 
 import type { AccountInfo, MintInfo, u64 } from "@solana/spl-token";
-import type { IMintData, ISynthesizeRequestEvent, Syntesise } from './prg-syntesise';
-
-
-export interface IBurnRequestEvent {
-  //
-}
-
+import type { Syntesise } from './prg-syntesise';
+import type {
+  IBurnRequestEvent,
+  IMintDataAccount,
+  ISynthesizeRequestEvent,
+} from "../bridge-ts/interfaces";
 
 export class BridgeUserClient {
   private main: Syntesise;
@@ -73,7 +72,9 @@ export class BridgeUserClient {
     const resp = await this.connection
     .getTokenAccountsByOwner(pubUser, filter);
     for (const { account, pubkey } of resp?.value) {
-      const tokenMint = new web3.PublicKey((account.data as Buffer).slice(0, 32));
+      const tokenMint = new web3.PublicKey(
+        (account.data as Buffer).slice(0, 32)
+      );
       const ai = await this.fetchTokenAccountInfo(tokenMint, pubkey);
       result.push(ai);
     }
@@ -83,11 +84,13 @@ export class BridgeUserClient {
 
   public async fetchAllUserTokenBalances(
     pubUser: web3.PublicKey,
-  ): Promise<any> {
+  ): Promise<{ [publickey: string]: u64 }> {
     const result: { [publickey: string]: u64 } = {};
 
     const ais = await this.fetchAllUserTokenAccountInfos(pubUser);
-    ais.forEach(({ mint, amount }) => result[mint.toBase58()] = amount);
+    ais.forEach(({ mint, amount }) => {
+      result[mint.toBase58()] = amount;
+    });
 
     return result;
   }
@@ -127,10 +130,10 @@ export class BridgeUserClient {
   // NOTE: emergencyUnsyntesizeRequest synthesize method fro revert synthesize. Use in opposite synthesis
   // export const revertSynthesize = async (
 
-  public async getListRepresentation(): Promise<IMintData[]> {
+  public async getListRepresentation(): Promise<IMintDataAccount[]> {
     const settings = await this.main.fetchSettings();
     const { syntTokens } = settings;
-    const representations: IMintData[] = [];
+    const representations: IMintDataAccount[] = [];
     for (const pubMintData of syntTokens) {
       representations.push(
         await this.main.fetchSyntData(pubMintData),

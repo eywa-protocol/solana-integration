@@ -98,7 +98,7 @@ async function createSynts(
       name, // desc.name,
       name, // desc.symbol,
       6, // desc.decimals,
-      address, // desc.address,
+      Buffer.from(address, 'hex'), // desc.address,
       // desc.chainId,
       accAdmin.publicKey,
     );
