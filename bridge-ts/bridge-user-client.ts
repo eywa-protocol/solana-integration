@@ -9,6 +9,7 @@ import BridgeFactory from './';
 
 import type { AccountInfo, MintInfo, u64 } from "@solana/spl-token";
 import type { Syntesise } from './prg-syntesise';
+import type { TestTokenFaucet } from './prg-test-token-faucet';
 import type {
   IBurnRequestEvent,
   IMintDataAccount,
@@ -17,12 +18,23 @@ import type {
 
 export class BridgeUserClient {
   private main: Syntesise;
+  private faucet: TestTokenFaucet;
   private accGuest = web3.Keypair.generate();
 
   constructor(
     private connection: web3.Connection,
   ) {
-    this.main = (new BridgeFactory(connection)).main;
+    const factory = new BridgeFactory(connection);
+    this.main = factory.main;
+    this.faucet = factory.faucet;
+  }
+
+  public async mintTestTokenBySymbol(
+    symbol: String,
+    pubUser: web3.PublicKey,
+    amount: BN,
+  ): Promise<web3.TransactionInstruction> {
+    return this.faucet.mintTo(symbol, pubUser, amount);
   }
 
   public async fetchTokenMintInfo(

@@ -18,7 +18,7 @@ import type {
 import type { UInt160 } from "./interfaces/types";
 
 
-const allowOwnerOffCurve = true;
+const ALLOW_OWNER_OFF_CURVE = true;
 
 const seedMint = Buffer.from("mint-synt", "utf-8");
 const seedData = Buffer.from("mint-data", "utf-8");
@@ -29,6 +29,7 @@ const seedSyntReq = Buffer.from("eywa-synthesize-state", "utf-8");
 
 export class Syntesise extends Base {
   // private logger = new Logger();
+  private accGuest = web3.Keypair.generate();
 
   constructor(
     connection: web3.Connection,
@@ -100,7 +101,7 @@ export class Syntesise extends Base {
       TOKEN_PROGRAM_ID,
       pubToken,
       await this.getSettingsAddress(),
-      allowOwnerOffCurve
+      ALLOW_OWNER_OFF_CURVE,
     );
   }
 
@@ -358,5 +359,110 @@ export class Syntesise extends Base {
         { accounts }
       );
     return ixEmergencyUnsynthesize;
+  }
+
+  public async mintSyntheticToken(
+    // bumpSeedMint, // : u8,
+    // bumpSynthesizeState, // : u8,
+    realToken: Uint8Array | Buffer,
+    txId: Uint8Array | Buffer,
+    pubUser: web3.PublicKey,
+    // pubToken: web3.PublicKey,
+    // pubUser: web3.PublicKey,
+    // pubUserAssociatedTokenAddress: web3.PublicKey,
+  ): Promise<web3.TransactionInstruction> {
+    // const pubSettings = await this.getSettingsAddress();
+    // const [pubTxState, bumpTxState] =
+    //   await this.findTxStateAddress(pubToken);
+    const [
+      pubSynthesizeState,
+      bumpSynthesizeState,
+    ] = await web3.PublicKey.findProgramAddress([
+      Buffer.from('eywa-synthesize-state', 'utf-8'),
+      // Buffer.from(realToken, 'hex'),
+      realToken,
+    ], this.program.programId);
+
+    const [pubkeyMint, bumpSeedMint] = await web3.PublicKey.findProgramAddress([
+      // Buffer.from(anchor.utils.bytes.utf8.encode("mint-synt")),
+      Buffer.from('mint-synt', 'utf-8'),
+      // Buffer.from(realToken, 'hex'),
+      realToken,
+    ], this.program.programId);
+    // logger.logPublicKey('pubkeyMint', pubkeyMint);
+
+    const [pubkeyData, bumpSeedData] = await web3.PublicKey.findProgramAddress([
+      Buffer.from('mint-data', 'utf-8'),
+      // Buffer.from(realToken, 'hex'),
+      realToken,
+    ], this.program.programId);
+    // logger.logPublicKey('pubkeyData', pubkeyData);
+
+    // const token = new Token(
+    //   this.connection,
+    //   pubkeyMint,
+    //   TOKEN_PROGRAM_ID,
+    //   this.accGuest,
+    // );
+    // token.getOrCreateAssociatedAccountInfo
+    const walUser = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
+      pubkeyMint,
+      pubUser,
+    );
+    // return Token.getAssociatedTokenAddress(
+    //   ASSOCIATED_TOKEN_PROGRAM_ID,
+    //   TOKEN_PROGRAM_ID,
+    //   pubToken,
+    //   await this.getSettingsAddress(),
+    //   ALLOW_OWNER_OFF_CURVE,
+    // );
+
+    // const accounts = {
+    //   settings: pubSettings,
+    //   txState: pubTxState,
+    //   realToken: pubToken,
+    //   client: pubUser,
+    //   source: await this.getAssociatedTokenAddress(pubToken),
+    //   destination: pubUserAssociatedTokenAddress,
+    //   // bridgeSettings: await this.bridge.getSettingsAddress(),
+    //   bridgeProgram: this.bridge.pid,
+    //   // pdaMaster: pubSettings,
+    //   tokenProgram: TOKEN_PROGRAM_ID,
+    // };
+
+    // const ixEmergencyUnsynthesize =
+    //   await this.program.instruction.emergencyUnsynthesize(
+    //     bumpTxState,
+    //     { accounts }
+    //   );
+    const ixMintSyntheticToken = await this.program.instruction
+    .mintSyntheticToken(
+      txId,
+      bumpSynthesizeState, // : u8,
+      // bumpSeedData, // : u8,
+      // new BN(realToken, 16).toArray(), // U160
+      // new BN(txId, 16).toArray(), // H256
+      new BN(3), // amount
+      // 'Some Synt Name', // synt name
+      // 'SSN', // synt short name
+    {
+      accounts: {
+        settings: await this.getSettingsAddress(),
+        synthesizeState: pubSynthesizeState,
+        to: walUser, // accTo.publicKey,
+        mintSynt: pubkeyMint,
+        mintData: pubkeyData,
+        // thisProgram: this.program.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: web3.SystemProgram.programId,
+        rent: web3.SYSVAR_RENT_PUBKEY,
+        bridge: this.bridge.pid, // accAdmin.publicKey,
+        // bridgeSigner: accAdmin.publicKey,
+      },
+    });
+
+    return ixMintSyntheticToken;
   }
 }

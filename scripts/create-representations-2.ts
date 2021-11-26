@@ -2,11 +2,9 @@ import { Provider, web3 } from "@project-serum/anchor";
 
 import StubWallet from "../bridge-ts/stub-wallet";
 import BridgeFactory, { SolanaHelper } from '../bridge-ts';
-import { BridgeUserClient } from '../bridge-ts/bridge-user-client';
 import { Logger } from '../utils-ts';
 
 import keyAdmin from '../keys/admin-keypair.json';
-import jsonTokens from './tokens.json';
 
 
 // const connectionString = 'https://api.devnet.solana.com';
@@ -15,64 +13,79 @@ const connectionString = process.env.CNN_URL || 'http://localhost:8899';
 const logger = new Logger();
 logger.log({ connectionString });
 
+const symbols = [
+  'SOL',
+  'EYWA',
+  'USDT',
+];
 
-interface IRealTokenDescription {
-  name: string;
-  symbol: string;
-  address: string;
-  decimals: number;
-  chainId: number;
-}
-
-interface IJsonTokens {
-  defaultTokens: IRealTokenDescription[];
-}
-
-const Chains = {
-  4: 'Rinkeby',
-  97: 'tBNB',
-  256: 'tHeco',
-  80001: 'tMatic',
-}
-
-async function createSynts(
+async function initFaucet(
   accAdmin: web3.Keypair,
   factory: BridgeFactory,
   helper: SolanaHelper,
 ) {
-  const tokens = (jsonTokens as IJsonTokens).defaultTokens;
-  // console.log(tokens);
+  const ixInit = await factory.faucet.init(accAdmin);
+  const tx = new web3.Transaction();
+  tx.add(ixInit);
+  tx.recentBlockhash = await helper.getRecentBlockhash();
 
-  for (const desc of tokens) {
-    const chainId = Chains[desc.chainId] || desc.chainId;
-    const name = `e${ desc.name }(${ chainId })`;
-    const address = Buffer.from(desc.address.substr(2), 'hex');
-    console.log({ name, address });
-    // console.log(desc);
+  await helper.sendAndConfirmTransaction('Initialize faucet', tx, accAdmin);
+}
+
+async function createReals(
+  accAdmin: web3.Keypair,
+  factory: BridgeFactory,
+  helper: SolanaHelper,
+) {
+
+  await initFaucet(
+    accAdmin,
+    factory,
+    helper,
+  );
+
+  for(let i in symbols) {
+    const symbol = symbols[i];
+
+    try {
+      const ixCreateMint = await factory.faucet.createMint(
+        symbol, // name,
+        symbol,
+        accAdmin.publicKey,
+      );
+      const tx2 = new web3.Transaction();
+      tx2.add(ixCreateMint);
+
+      tx2.recentBlockhash = await helper.getRecentBlockhash();
+      await helper.sendAndConfirmTransaction('Create mint', tx2, accAdmin);
+    } catch (ex) {
+      console.log(ex);
+    }
+
+    const pubToken = await factory.faucet.getMintAddress(symbol);
+    logger.logPublicKey(`token${ symbol }`, pubToken);
+    logger.log(await factory.faucet.fetchMintData(symbol));
 
     const tx = new web3.Transaction();
-    const ix = await factory.main.createRepresentation(
-      name, // desc.name,
-      name, // desc.symbol,
-      6, // desc.decimals,
-      address, // desc.address,
-      // desc.chainId,
+    const ix = await factory.main.createRepresentationRequest(
+      pubToken,
       accAdmin.publicKey,
     );
     tx.add(ix);
     await helper.sendAndConfirmTransaction(
-      `createRepresentation ${name}`,
+      `createRepresentationRequest ${ pubToken.toBase58() }`,
       tx,
       accAdmin,
     );
   }
+
+  logger.log(await factory.main.fetchSettings());
 }
 
 async function main() {
   const connection = new web3.Connection(connectionString);
   logger.log('EpochInfo:', await connection.getEpochInfo());
 
-  // const accAdmin = web3.Keypair.generate();
   const accAdmin = web3.Keypair.fromSecretKey(Buffer.from(keyAdmin));
   logger.logPublicKey('accAdmin:', accAdmin.publicKey);
 
@@ -84,10 +97,7 @@ async function main() {
   const helper = new SolanaHelper(provider);
   const factory = new BridgeFactory(connection);
 
-  await createSynts(accAdmin, factory, helper);
-
-  const client = new BridgeUserClient(connection);
-  console.log(await client.getListRepresentation());
+  await createReals(accAdmin, factory, helper);
 }
 
 

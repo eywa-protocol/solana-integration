@@ -70,13 +70,22 @@ redeploy-portal-testnet:
 deploy-portal-local:
 	solana program deploy -v -C keys/config-local.yml --max-len 3000000 --program-id "./target/deploy/eywa_portal_synthesis-keypair.json" "./target/deploy/eywa_portal_synthesis.so"
 
+deploy-faucet-devnet:
+	solana program deploy -v -C keys/config-devnet.yml --max-len 2000000 --program-id "./target/deploy/test_token_faucet-keypair.json" "./target/deploy/test_token_faucet.so"
+
+deploy-faucet-testnet:
+	solana program deploy -v -C keys/config-testnet.yml --max-len 2000000 --program-id "./target/deploy/test_token_faucet-keypair.json" "./target/deploy/test_token_faucet.so"
+
+deploy-faucet-local:
+	solana program deploy -v -C keys/config-local.yml --max-len 2000000 --program-id "./target/deploy/test_token_faucet-keypair.json" "./target/deploy/test_token_faucet.so"
+
 init-local: init-js deploy-solana-local configure-solana-contracts-local
 
 deploy-solana-local:
 	solana airdrop -C keys/config-local.yml 200
 	solana program deploy -v -C keys/config-local.yml --max-len 2000000 --program-id "./target/deploy/eywa_bridge-keypair.json" "./target/deploy/eywa_bridge.so"
 	solana program deploy -v -C keys/config-local.yml --max-len 3000000 --program-id "./target/deploy/eywa_portal_synthesis-keypair.json" "./target/deploy/eywa_portal_synthesis.so"
-
+	solana program deploy -v -C keys/config-local.yml --max-len 2000000 --program-id "./target/deploy/test_token_faucet-keypair.json" "./target/deploy/test_token_faucet.so"
 
 init-js:
 	npm i -g @project-serum/anchor-cli
@@ -87,6 +96,7 @@ configure-solana-contracts-local:
 	npm run deploy:init:local
 	npm run set:owner:local
 	npm run token:init:local
+	npm run token:init:local2
 
 
 

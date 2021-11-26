@@ -3,6 +3,7 @@ export { IBurnRequestEvent } from "./i-burn-request-event";
 export { TransactionAccount } from "./i-transaction-account";
 export { StandaloneInstruction } from "./i-standalone-instruction";
 export { IBridgeSettingsAccount } from "./i-bridge-settings-account";
+export { IFaucetSettingsAccount } from "./i-faucet-settings-account";
 export { ISynthesizeRequest } from "./i-synthesize-request";
 export { ISynthesizeRequestEvent } from "./i-synthesize-request-event";
 export { IMintDataAccount } from "./i-mint-data-account";

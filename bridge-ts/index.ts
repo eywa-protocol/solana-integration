@@ -3,6 +3,7 @@
 import { Bridge } from './prg-bridge';
 import { Syntesise } from './prg-syntesise';
 import { TestStub } from './prg-test-stub';
+import { TestTokenFaucet } from './prg-test-token-faucet';
 
 import { web3 } from '@project-serum/anchor';
 export { web3 } from '@project-serum/anchor';
@@ -17,7 +18,11 @@ import type { IdlDeployed } from './idl';
 
 const checkPid = (idl: IdlDeployed, pid: web3.PublicKey) => {
   if ( idl.metadata?.address ) {
-    if ( !(idl.metadata?.address == pid.toBase58()) ) {
+    // console.log({
+    //   'idl.metadata.address': idl.metadata?.address,
+    //   pid,
+    // });
+    if ( !(idl.metadata?.address == pid?.toBase58()) ) {
       throw Error('Disambiguous programId (idl and deploy)');
     }
   } else {
@@ -79,6 +84,20 @@ class Factory {
     }
 
     return this._stub;
+  }
+
+  public get pidFaucet(): web3.PublicKey {
+    return pid.faucet;
+  }
+
+  protected _faucet: TestTokenFaucet;
+  public get faucet(): TestTokenFaucet {
+    if ( !this._faucet ) {
+      checkPid(idl.faucet, pid.faucet);
+      this._faucet = new TestTokenFaucet(this.connection, pid.faucet, idl.faucet);
+    }
+
+    return this._faucet;
   }
 }
 

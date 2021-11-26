@@ -1,7 +1,7 @@
-anchor_version = "0.16.1"
+anchor_version = "0.18.2"
 
 [workspace]
-members = ["programs/eywa-bridge", "programs/eywa-gas-tank", "programs/eywa-portal-synthesis", "programs/test-stub"]
+members = ["programs/eywa-bridge", "programs/eywa-gas-tank", "programs/eywa-portal-synthesis", "programs/test-token-faucet", "programs/test-stub"]
 
 [provider]
 cluster = "localnet"

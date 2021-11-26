@@ -5,6 +5,10 @@ import StubWallet from "../bridge-ts/stub-wallet";
 import BridgeFactory, { SolanaHelper } from '../bridge-ts';
 
 import type { StandaloneInstruction, TransactionAccount } from '../bridge-ts/interfaces';
+import type {
+  // UInt256,
+  UInt160,
+} from '../bridge-ts/interfaces/types';
 
 import keyAdmin from '../keys/admin-keypair.json';
 
@@ -35,6 +39,29 @@ async function initMain(
   const pubSigner = await factory.bridge.getReceiveRequestAddress();
   await helper.transfer(new BN('10'+'000'+'000'+'000'), pubSigner, accAdmin);
 
+  const addrBridgeFrom: UInt160 = Buffer.from(
+    '1122334455667788990011223344556677889900',
+    'hex',
+  );
+  const addrContractFrom: UInt160 = Buffer.from(
+    '1122334455667788990011223344556677889900',
+    'hex',
+  );
+
+  const ixBind = await factory.bridge.addContractReceiveBind(
+    addrBridgeFrom,
+    addrContractFrom,
+    accAdmin.publicKey,
+  );
+  const tx0 = new web3.Transaction();
+  tx0.add(ixBind);
+  tx0.recentBlockhash = await helper.getRecentBlockhash();
+  await helper.sendAndConfirmTransaction(
+  'bridge.addContractReceiveBind',
+    tx0,
+    accAdmin,
+  );
+
   const ixInit = await factory.main.init(pubSigner);
   // logger.logIx('ixInit', ixInit);
 
@@ -48,7 +75,8 @@ async function initMain(
     new web3.PublicKey(Buffer.from(
       '1122334455667788990011223344556677889900112233445566778899001122',
     'hex')),
-    Buffer.from('1122334455667788990011223344556677889900', 'hex'),
+    addrBridgeFrom,
+    addrContractFrom,
     sinstInit,
     accAdmin.publicKey,
   );

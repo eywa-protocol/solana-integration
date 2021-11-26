@@ -1,4 +1,4 @@
-import { web3 } from '@project-serum/anchor';
+import { Context, Program, web3 } from '@project-serum/anchor';
 
 import { Base } from './prg-base';
 
@@ -11,6 +11,8 @@ import type {
   StandaloneInstruction,
   IBridgeSettingsAccount,
 } from './interfaces';
+
+import { EywaBridge } from '../target/types/eywa_bridge';
 
 const seedPDA = Buffer.from('eywa-pda', 'utf-8');
 const seedReceiveRequest = Buffer.from('receive-request', 'utf-8');
@@ -66,7 +68,8 @@ export class Bridge extends Base {
     const [pdaSettings, bumpSettings] = await this.findSettingsAddress();
     // this.logger.logPublicKey('pdaSettings', pdaSettings);
 
-    const ixInit = this.program.instruction
+    const p = this.program as Program<EywaBridge>;
+    const ixInit = p.instruction
     .initialize(bumpSettings, {
       accounts: {
         settings: pdaSettings,
@@ -145,17 +148,27 @@ export class Bridge extends Base {
     const remainingAccounts = [
       { pubkey: sinst.programId, isWritable: false, isSigner: false },
       { pubkey: pubSigner, isWritable: false, isSigner: false },
-      ...sinst.accounts.map((value) => ({
+      ...(sinst.accounts.map((value) => ({
         ...value,
         isSigner: value.pubkey.equals(pubSigner) ? false : value.isSigner,
-      })),
+      })) as web3.AccountMeta[] ),
     ];
 
-    const ixReceiveRequest = await this.program.instruction
+    // Array.prototype.slice.call(addrBridgeFrom, 0) as number[],
+
+    const p = this.program as Program<EywaBridge>;
+    // const ctx: Context = {
+    //   accounts,
+    //   remainingAccounts,
+    // };
+    const ixReceiveRequest = await p.instruction
     .receiveRequest(
-      addrBridgeFrom,
+      addrBridgeFrom as any as number[],
       sinst,
-      { accounts, remainingAccounts },
+      {
+        accounts,
+        remainingAccounts,
+      },
     );
 
     return ixReceiveRequest as web3.TransactionInstruction;
