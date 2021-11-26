@@ -168,14 +168,14 @@ pub struct EmergencyUnsyntesizeRequest<'info> {
 impl<'info> EmergencyUnsyntesizeRequest<'info> {
     pub fn into_transmit_request_context(
         &self
-    ) -> CpiContext<'_, '_, '_, 'info, eywa_bridge::ctxt::TransmitRequest<'info>> {
+    ) -> CpiContext<'_, '_, '_, 'info, eywa_bridge::cpi::accounts::TransmitRequest<'info>> {
         CpiContext::new(
             self.bridge_program.to_account_info(),
-            eywa_bridge::ctxt::TransmitRequest {
+            eywa_bridge::cpi::accounts::TransmitRequest {
                 signer: self.settings.to_account_info(),
-                settings: self.bridge_settings.clone(),
+                settings: self.bridge_settings.to_account_info(),
                 system_program: self.system_program.to_account_info(),
-                rent: self.rent.clone(),
+                rent: self.rent.to_account_info(),
             },
         )
     }
@@ -234,14 +234,14 @@ impl<'info> BurnSyntheticToken<'info> {
     }
     pub fn into_transmit_request_context(
         &self
-    ) -> CpiContext<'_, '_, '_, 'info, eywa_bridge::ctxt::TransmitRequest<'info>> {
+    ) -> CpiContext<'_, '_, '_, 'info, eywa_bridge::cpi::accounts::TransmitRequest<'info>> {
         CpiContext::new(
             self.bridge_program.to_account_info(),
-            eywa_bridge::ctxt::TransmitRequest {
+            eywa_bridge::cpi::accounts::TransmitRequest {
                 signer: self.settings.to_account_info(),
-                settings: self.bridge_settings.clone(),
+                settings: self.bridge_settings.to_account_info(),
                 system_program: self.system_program.to_account_info(),
-                rent: self.rent.clone(),
+                rent: self.rent.to_account_info(),
             },
         )
     }
@@ -364,14 +364,14 @@ impl<'info> Synthesize<'info> {
     }
     pub fn into_transmit_request_context(
         &self
-    ) -> CpiContext<'_, '_, '_, 'info, eywa_bridge::ctxt::TransmitRequest<'info>> {
+    ) -> CpiContext<'_, '_, '_, 'info, eywa_bridge::cpi::accounts::TransmitRequest<'info>> {
         CpiContext::new(
             self.bridge_program.to_account_info(),
-            eywa_bridge::ctxt::TransmitRequest {
+            eywa_bridge::cpi::accounts::TransmitRequest {
                 signer: self.settings.to_account_info(),
-                settings: self.bridge_settings.clone(),
+                settings: self.bridge_settings.to_account_info(),
                 system_program: self.system_program.to_account_info(),
-                rent: self.rent.clone(),
+                rent: self.rent.to_account_info(),
             },
         )
     }
@@ -411,8 +411,8 @@ impl<'info> EmergencyUnsynthesize<'info> {
         CpiContext::new(
             self.token_program.to_account_info(),
             anchor_spl::token::Transfer {
-                from: self.source.to_account_info().clone(),
-                to: self.destination.to_account_info().clone(),
+                from: self.source.to_account_info(),
+                to: self.destination.to_account_info(),
                 authority: self.settings.to_account_info(),
             },
         )
@@ -447,8 +447,8 @@ impl<'info> Unsynthesize<'info> {
         CpiContext::new(
             self.token_program.to_account_info(),
             anchor_spl::token::Transfer {
-                from: self.source.to_account_info().clone(),
-                to: self.destination.to_account_info().clone(),
+                from: self.source.to_account_info(),
+                to: self.destination.to_account_info(),
                 authority: self.settings.to_account_info(),
             },
         )
@@ -480,15 +480,15 @@ pub struct EmergencyUnburnRequest<'info> {
 impl<'info> EmergencyUnburnRequest<'info> {
     pub fn into_transmit_request_context(
         &self
-    ) -> CpiContext<'_, '_, '_, 'info, eywa_bridge::ctxt::TransmitRequest<'info>> {
+    ) -> CpiContext<'_, '_, '_, 'info, eywa_bridge::cpi::accounts::TransmitRequest<'info>> {
         CpiContext::new(
             self.bridge_program.to_account_info(),
-            eywa_bridge::ctxt::TransmitRequest {
+            eywa_bridge::cpi::accounts::TransmitRequest {
                 // signer: self.pda_master.clone(),
                 signer: self.settings.to_account_info(),
-                settings: self.bridge_settings.clone(),
+                settings: self.bridge_settings.to_account_info(),
                 system_program: self.system_program.to_account_info(),
-                rent: self.rent.clone(),
+                rent: self.rent.to_account_info(),
             },
         )
     }
