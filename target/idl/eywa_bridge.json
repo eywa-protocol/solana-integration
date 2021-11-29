@@ -124,6 +124,48 @@
       ]
     },
     {
+      "name": "testOracleRequest",
+      "accounts": [
+        {
+          "name": "signer",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "requestId",
+          "type": "publicKey"
+        },
+        {
+          "name": "selector",
+          "type": "bytes"
+        },
+        {
+          "name": "receiveSide",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "oppositeBridge",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "chainId",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "addContractSendBind",
       "accounts": [
         {
@@ -387,7 +429,7 @@
           "index": false
         },
         {
-          "name": "chainid",
+          "name": "chainId",
           "type": "u64",
           "index": false
         }

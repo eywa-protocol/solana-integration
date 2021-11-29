@@ -29,7 +29,7 @@
     "test:rs:ps": "cargo test-bpf --manifest-path programs/eywa-portal-synthesis/Cargo.toml",
     "test:rs:tank": "cargo test-bpf --manifest-path programs/eywa-gas-tank/Cargo.toml",
     "test:rs": "cargo test-bpf",
-    "test:internal": "npm run test:internal5",
+    "test:internal": "npm run test:internal4",
     "test:internal1": "ts-mocha -p ./tsconfig.json -t 1000000 tests/*.ts",
     "test:internal2": "ts-mocha -p ./tsconfig.json -t 1000000 tests/eywa-portal-solana.ts",
     "test:internal3": "ts-mocha -p ./tsconfig.json -t 1000000 tests/eywa-bridge-solana.ts",

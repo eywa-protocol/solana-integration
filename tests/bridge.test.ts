@@ -45,7 +45,7 @@ describe('bridge', () => {
   });
 
   const INIT_BRIDGE = 'Initialize bridge'
-  it(INIT_BRIDGE, async () => {
+  it.skip(INIT_BRIDGE, async () => {
     const ixInit = await bridge.init(accAdmin);
     // logger.logIx('ixInit', ixInit);
     const tx = new web3.Transaction();
@@ -62,7 +62,7 @@ describe('bridge', () => {
     // logger.logState('settings', settings);
   });
 
-  it('Hello World', async () => {
+  it.skip('Hello World', async () => {
     const addrBridgeFrom: UInt160 = Buffer.from(
       '1122334455667788990011223344556677889900',
       'hex',
@@ -128,7 +128,7 @@ describe('bridge', () => {
     console.log(event);
   });
 
-  it('Hello World Signed', async () => {
+  it.skip('Hello World Signed', async () => {
     // logger.logPublicKey('accAdmin', accAdmin.publicKey);
     // logger.logPublicKey('pidBridge', factory.bridge.pid);
     // logger.logPublicKey('provider', provider.wallet.publicKey);
@@ -176,7 +176,7 @@ describe('bridge', () => {
   });
 
   const INIT_SYNTHESIS = 'Init synthesis';
-  it(INIT_SYNTHESIS, async () => {
+  it.skip(INIT_SYNTHESIS, async () => {
     // logger.logPublicKey('accAdmin', accAdmin.publicKey);
     // logger.logPublicKey('pidBridge', factory.bridge.pid);
     // logger.logPublicKey('provider', provider.wallet.publicKey);
@@ -224,5 +224,111 @@ describe('bridge', () => {
     await helper.sendAndConfirmTransaction('setOwner', tx2, accAdmin);
     console.log(await main.fetchSettings());
     console.log(accAdmin.publicKey.toBuffer().toString('hex'));
+  });
+
+  const MINT_SYNTHETIC_TOKEN = 'Mint Synthetic Token';
+  it.skip(MINT_SYNTHETIC_TOKEN, async () => {
+    // logger.logPublicKey('accAdmin', accAdmin.publicKey);
+    // logger.logPublicKey('pidBridge', factory.bridge.pid);
+    // logger.logPublicKey('provider', provider.wallet.publicKey);
+
+    const pubSigner = await bridge.getReceiveRequestAddress();
+
+    // logger.logPublicKey('pubSigner', pubSigner);
+    // logger.log('bumpSigner:', bumpSigner);
+    // await helper.transfer(new BN('10000000000000000'), pubSigner);
+
+    const realToken = /* 0x */"1234567890123456789012345678901234567890";
+    const txId = /* 0x */"1234567890123456789012345678901234567890123456789012345678901234";
+    const user = /* 0x */"1234567890123456789012345678901234567890123456789012345678901234";
+
+    const ixMintSyntheticToken = await main.mintSyntheticToken(
+      Buffer.from(realToken, 'hex'),
+      Buffer.from(txId, 'hex'),
+      new web3.PublicKey(Buffer.from(user, 'hex')),
+    ); // init(pubSigner);
+    // logger.logIx('ixInit', ixInit);
+
+    const sinstInit: StandaloneInstruction = {
+      programId: ixMintSyntheticToken.programId,
+      accounts: ixMintSyntheticToken.keys as TransactionAccount[],
+      data: ixMintSyntheticToken.data,
+    };
+    console.log(sinstInit);
+
+    // const tx = new web3.Transaction();
+    // tx.add(ixReceiveRequest);
+    // tx.recentBlockhash = await helper.getRecentBlockhash();
+
+    // await helper.sendAndConfirmTransaction(INIT_SYNTHESIS, tx, accAdmin);
+
+    // // expect(param).eq('100');
+    // // expect(owner).eq(accAdmin.publicKey.toBase58());
+
+    // console.log(await main.fetchSettings());
+    // const ixSetOwner = await main.setOwner(accAdmin.publicKey);
+    // const tx2 = new web3.Transaction();
+    // tx2.add(ixSetOwner);
+    // tx2.recentBlockhash = await helper.getRecentBlockhash();
+    // await helper.sendAndConfirmTransaction('setOwner', tx2, accAdmin);
+    // console.log(await main.fetchSettings());
+    // console.log(accAdmin.publicKey.toBuffer().toString('hex'));
+  });
+
+  const TEST_ORACLE_REQUEST = 'Test Oracle Request';
+  it(TEST_ORACLE_REQUEST, async () => {
+    const requestId = new web3.PublicKey(Buffer.from(
+      '1122334455667788990011223344556677889900112233445566778899001122',
+    'hex')); // : web3.PublicKey,
+    const selector = Buffer.from(
+      '112233445566',
+    'hex'); // : Buffer,
+    const receiveSide = Buffer.from(
+      '1122334455667788990011223344556677889900',
+    'hex'); // : UInt160,
+    const oppositeBridge = Buffer.from(
+      '1122334455667788990011223344556677889900',
+    'hex'); // : UInt160,
+    const chainId = new BN(7);
+
+    const ixTestOracleRequest = await bridge.testOracleRequest(
+      requestId,
+      selector,
+      receiveSide,
+      oppositeBridge,
+      chainId,
+      accAdmin.publicKey,
+    );
+
+    const tx = new web3.Transaction();
+    tx.add(ixTestOracleRequest);
+    tx.recentBlockhash = await helper.getRecentBlockhash();
+
+    let listener = null;
+    let event, slot;
+    try {
+      [event, slot] = await new Promise((resolve, reject) => {
+        console.log('setting listener');
+        listener = bridge.addEventListener(
+          'OracleRequest',
+          (event, slot) => resolve([event, slot]),
+        );
+
+        helper.sendAndConfirmTransaction(TEST_ORACLE_REQUEST, tx, accAdmin)
+        .then(console.log)
+        .catch(ex => {
+          reject(ex);
+        });
+      });
+    } catch (ex) {
+      console.log('catch ex:', ex);
+      throw ex;
+    } finally {
+      console.log('removing listener');
+      await bridge.removeEventListener(listener);
+    }
+
+    console.log('OracleRequest');
+    console.log(event);
   });
 });

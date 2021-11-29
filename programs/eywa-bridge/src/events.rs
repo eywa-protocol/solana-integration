@@ -23,8 +23,7 @@ pub struct OracleRequest {
     pub selector: Vec<u8>,
     pub receive_side: [u8; 20],
     pub opposite_bridge: [u8; 20],
-    pub chainid: u64,
-
+    pub chain_id: u64,
 }
 
 /*

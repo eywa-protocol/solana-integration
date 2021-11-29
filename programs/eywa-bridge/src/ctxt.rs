@@ -119,3 +119,8 @@ pub struct TransmitRequest<'info> {
     pub system_program: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
 }
+
+#[derive(Accounts)]
+pub struct TestOracleRequest<'info> {
+    pub signer: Signer<'info>,
+}

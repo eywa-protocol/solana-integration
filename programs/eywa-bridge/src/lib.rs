@@ -154,7 +154,30 @@ pub mod eywa_bridge {
             selector,
             receive_side,
             opposite_bridge,
-            chainid: chain_id,
+            chain_id,
+        };
+        emit!(event);
+
+        Ok(())
+    }
+
+    pub fn test_oracle_request (
+        ctx: Context<TestOracleRequest>,
+        request_id: Pubkey,
+        selector: Vec<u8>,
+        receive_side: [u8; 20],
+        opposite_bridge: [u8; 20],
+        chain_id: u64,
+    ) -> ProgramResult {
+
+        let event = events::OracleRequest{
+            request_type: "setRequest".to_string(),
+            bridge: *ctx.program_id,
+            request_id,
+            selector,
+            receive_side,
+            opposite_bridge,
+            chain_id: chain_id,
         };
         emit!(event);
 

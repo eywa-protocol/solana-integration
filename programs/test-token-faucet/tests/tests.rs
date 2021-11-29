@@ -24,7 +24,7 @@ pub fn program_test() -> ProgramTest {
     ProgramTest::new(
         "test_token_faucet",
         test_token_faucet::id(),
-        processor!(eywa_bridge::entry),
+        processor!(test_token_faucet::entry),
     )
 }
 

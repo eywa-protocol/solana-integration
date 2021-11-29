@@ -1,4 +1,9 @@
-import { Context, Program, web3 } from '@project-serum/anchor';
+import {
+  BN,
+  // Context,
+  Program,
+  web3,
+} from '@project-serum/anchor';
 
 import { Base } from './prg-base';
 
@@ -172,5 +177,29 @@ export class Bridge extends Base {
     );
 
     return ixReceiveRequest as web3.TransactionInstruction;
+  }
+
+  public async testOracleRequest(
+    requestId: web3.PublicKey,
+    selector: Buffer,
+    receiveSide: UInt160,
+    oppositeBridge: UInt160,
+    chainId: BN,
+    pubSigner: web3.PublicKey,
+  ): Promise<web3.TransactionInstruction> {
+
+    const p = this.program as Program<EywaBridge>;
+    const ixTestOracleRequest = await p.instruction
+    .testOracleRequest(
+      // addrBridgeFrom as any as number[],
+      requestId, // : Pubkey,
+      selector, // : Vec<u8>,
+      receiveSide, // : [u8; 20],
+      oppositeBridge, // : [u8; 20],
+      chainId, // : u64,
+    { accounts: {
+      signer: pubSigner,
+    }});
+    return ixTestOracleRequest as web3.TransactionInstruction;
   }
 }
