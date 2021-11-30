@@ -273,5 +273,8 @@
       "name": "InvalidThreshold",
       "msg": "Threshold must be less than or equal to the number of owners."
     }
-  ]
+  ],
+  "metadata": {
+    "address": "Ag6uLU9SnrX3VwbGvZTPjToaPg3x7DxuPQezU8t5GLKa"
+  }
 }

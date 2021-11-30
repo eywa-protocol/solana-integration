@@ -104,6 +104,11 @@
           "isSigner": false
         },
         {
+          "name": "thisProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
@@ -119,20 +124,15 @@
           "isSigner": false
         },
         {
-          "name": "bridge",
+          "name": "owner",
           "isMut": false,
           "isSigner": true
         }
       ],
       "args": [
         {
-          "name": "txId",
-          "type": {
-            "array": [
-              "u8",
-              32
-            ]
-          }
+          "name": "bumpMint",
+          "type": "u8"
         },
         {
           "name": "bumpRequest",
@@ -872,15 +872,6 @@
       "type": {
         "kind": "struct",
         "fields": [
-          {
-            "name": "txId",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
-          },
           {
             "name": "bump",
             "type": "u8"
