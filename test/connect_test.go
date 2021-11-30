@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/gagliardetto/solana-go/rpc/ws"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"log"
@@ -21,8 +22,10 @@ import (
 	"gitlab.digiu.ai/blockchainlaboratory/eywa-solana-test/serializer"
 )
 
-var c *client.Client
-var localSolanaUrl string
+var solana_client *client.Client
+var solana_ws_client *ws.Client
+
+var localSolanaUrl, localSolanaWSUrl string
 var accAdmin types.Account
 
 func SerializeData(data interface{}) ([]byte, error) {
@@ -131,10 +134,15 @@ func readAccountFromFile(filename string) (types.Account, error) {
 	return acc, nil
 }
 
-func init_() {
-	// c = client.NewClient(client.TestnetRPCEndpoint)
+func init() {
+	// solana_client = client.NewClient(client.TestnetRPCEndpoint)
 	localSolanaUrl = "http://127.0.0.1:8899"
-	c = client.NewClient(localSolanaUrl)
+	solana_client = client.NewClient(localSolanaUrl)
+	localSolanaWSUrl = "ws://127.0.0.1:8900"
+	solana_ws_client, err = ws.Connect(context.Background(), "ws://api.mainnet-beta.solana.com:80")
+	if err != nil {
+		panic(err)
+	}
 
 	accIdentity, err := readAccountFromFile("../localnet/ledger/validator-keypair.json")
 	if err != nil {
@@ -142,14 +150,14 @@ func init_() {
 	}
 	fmt.Println("identity:", accIdentity.PublicKey.ToBase58())
 
-	balance, err := c.GetBalance(context.Background(), accIdentity.PublicKey.ToBase58())
+	balance, err := solana_client.GetBalance(context.Background(), accIdentity.PublicKey.ToBase58())
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println("identity balance:", balance)
 
 	// create Admin test account
-	res, err := c.GetRecentBlockhash(context.Background())
+	res, err := solana_client.GetRecentBlockhash(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -158,7 +166,7 @@ func init_() {
 	accAdmin = types.NewAccount()
 	fmt.Println("Admin:", accAdmin.PublicKey.ToBase58())
 
-	balance, err = c.GetBalance(context.Background(), accAdmin.PublicKey.ToBase58())
+	balance, err = solana_client.GetBalance(context.Background(), accAdmin.PublicKey.ToBase58())
 	if err != nil {
 		panic(err)
 	}
@@ -179,14 +187,14 @@ func init_() {
 	if err != nil {
 		panic(err)
 	}
-	txSig, err := c.SendRawTransaction(context.Background(), rawTx)
+	txSig, err := solana_client.SendRawTransaction(context.Background(), rawTx)
 	if err != nil {
 		panic(err)
 	}
 	log.Println("txHash:", txSig)
 	for i := 0; i < 10; i++ {
 		fmt.Printf("%v ", i)
-		balance, err = c.GetBalance(context.Background(), accAdmin.PublicKey.ToBase58())
+		balance, err = solana_client.GetBalance(context.Background(), accAdmin.PublicKey.ToBase58())
 		if err != nil {
 			panic(err)
 		}
@@ -199,30 +207,55 @@ func init_() {
 }
 
 func Test_testnet_connect(t *testing.T) {
-	resp, err := c.GetVersion(context.Background())
+	resp, err := solana_client.GetVersion(context.Background())
 	require.NoError(t, err)
 	t.Log("testnet solana version:", resp.SolanaCore)
 }
 
-// func Test_Stub(t *testing.T) {
-// 	// localSolanaUrl = "http://127.0.0.1:8899"
-// }
+func Test_WS_Connect(t *testing.T) {
 
-// func Test_local_connect(t *testing.T) {
-// 	local_client := client.NewClient(localSolanaUrl)
-// 	resp, err := local_client.GetVersion(context.Background())
-// 	require.NoError(t, err)
-// 	fmt.Println("local solana version:", resp.SolanaCore)
-// }
+	client, err := ws.Connect(context.Background(), localSolanaWSUrl)
+	require.NoError(t, err)
+	//if err != nil {
+	//	panic(err)
+	//}
+
+	client.Close()
+	//
+	//resp, err := solana_client.GetVersion(context.Background())
+	//require.NoError(t, err)
+	//t.Log("testnet solana version:", resp.SolanaCore)
+}
+
+//func Test_Account(t *testing.T) {
+//
+//	resp, err := solana_client.GetVersion(context.Background())
+//	require.NoError(t, err)
+//	t.Log("testnet solana version:", resp.SolanaCore)
+//
+//	program := solana.MustPublicKeyFromBase58("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin")
+//	require.True(t, program)
+//}
+
+func Test_Stub(t *testing.T) {
+	// localSolanaUrl = "http://127.0.0.1:8899"
+}
+
+func Test_local_connect(t *testing.T) {
+	local_client := client.NewClient(localSolanaUrl)
+	resp, err := local_client.GetVersion(context.Background())
+	require.NoError(t, err)
+	fmt.Println("local solana version:", resp.SolanaCore)
+}
 
 func Test_Simple_transfer(t *testing.T) {
-	res, err := c.GetRecentBlockhash(context.Background())
+	res, err := solana_client.GetRecentBlockhash(context.Background())
 	if err != nil {
 		log.Fatalf("get recent block hash error, err: %v\n", err)
 	}
 	t.Log("RecentBlockHash:", res.Blockhash)
 
-	balance, err := c.GetBalance(
+	balance, err := solana_client.GetBalance(
 		context.Background(),
 		accAdmin.PublicKey.ToBase58(),
 	)
@@ -250,7 +283,7 @@ func Test_Simple_transfer(t *testing.T) {
 		log.Fatalf("generate tx error, err: %v\n", err)
 	}
 
-	txSig, err := c.SendRawTransaction(context.Background(), rawTx)
+	txSig, err := solana_client.SendRawTransaction(context.Background(), rawTx)
 	if err != nil {
 		log.Fatalf("send tx error, err: %v\n", err)
 	}
@@ -258,7 +291,7 @@ func Test_Simple_transfer(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		fmt.Printf("%v ", i)
-		balance, err = c.GetBalance(context.Background(), accountA.PublicKey.ToBase58())
+		balance, err = solana_client.GetBalance(context.Background(), accountA.PublicKey.ToBase58())
 		if err != nil {
 			log.Fatalln("get balance error", err)
 		}
@@ -267,7 +300,7 @@ func Test_Simple_transfer(t *testing.T) {
 		}
 		time.Sleep(3 * time.Second)
 	}
-	balance, err = c.GetBalance(
+	balance, err = solana_client.GetBalance(
 		context.Background(),
 		accAdmin.PublicKey.ToBase58(),
 	)
@@ -276,7 +309,7 @@ func Test_Simple_transfer(t *testing.T) {
 	}
 	t.Log("Admin balance:", balance)
 
-	balance, err = c.GetBalance(
+	balance, err = solana_client.GetBalance(
 		context.Background(),
 		accountA.PublicKey.ToBase58(),
 	)
@@ -287,6 +320,7 @@ func Test_Simple_transfer(t *testing.T) {
 }
 
 func Test_Create_representation(t *testing.T) {
+	//init_()
 	program, err := readAccountFromFile("../target/deploy/eywa_bridge-keypair.json")
 	if err != nil {
 		log.Fatalln("read pid error", err)
@@ -294,7 +328,7 @@ func Test_Create_representation(t *testing.T) {
 	t.Log("program account:", program.PublicKey.ToBase58())
 	t.Logf("program account: %x\n", program.PublicKey.Bytes())
 
-	info, err := c.GetAccountInfo(
+	info, err := solana_client.GetAccountInfo(
 		context.Background(),
 		program.PublicKey.ToBase58(),
 		client.GetAccountInfoConfig{
@@ -324,7 +358,7 @@ func Test_Create_representation(t *testing.T) {
 
 	space := uint64(82)
 	// lamports := uint64(1461600)
-	lamports, err := c.GetMinimumBalanceForRentExemption(context.Background(), space) // 1461600
+	lamports, err := solana_client.GetMinimumBalanceForRentExemption(context.Background(), space) // 1461600
 	if err != nil {
 		log.Fatalf("GetMinimumBalanceForRentExemption error: %v\n", err)
 	}
@@ -339,7 +373,7 @@ func Test_Create_representation(t *testing.T) {
 
 	space = uint64(1000)
 	// lamports = uint64(7850880)
-	lamports, err = c.GetMinimumBalanceForRentExemption(context.Background(), space) // 1461600
+	lamports, err = solana_client.GetMinimumBalanceForRentExemption(context.Background(), space) // 1461600
 	if err != nil {
 		log.Fatalf("GetMinimumBalanceForRentExemption error: %v\n", err)
 	}
@@ -382,7 +416,7 @@ func Test_Create_representation(t *testing.T) {
 		2,                // syntDecimals uint8, // u8
 	)
 
-	res, err := c.GetRecentBlockhash(context.Background())
+	res, err := solana_client.GetRecentBlockhash(context.Background())
 	if err != nil {
 		log.Fatalf("get recent block hash error, err: %v\n", err)
 	}
@@ -409,7 +443,7 @@ func Test_Create_representation(t *testing.T) {
 
 	t.Logf("rawTx: %x\n", rawTx)
 
-	txSig, err := c.SendRawTransaction(context.Background(), rawTx)
+	txSig, err := solana_client.SendRawTransaction(context.Background(), rawTx)
 	if err != nil {
 		t.Fatalf("send tx error, err: %v\n", err)
 	}
@@ -418,6 +452,7 @@ func Test_Create_representation(t *testing.T) {
 }
 
 func Test_Receive_request(t *testing.T) {
+	//init()
 	program, err := readAccountFromFile("../target/deploy/eywa_bridge-keypair.json")
 	if err != nil {
 		log.Fatalln("read pid error", err)
@@ -553,7 +588,7 @@ func Test_Receive_request(t *testing.T) {
 		Data: dataReceiveRequest,
 	}
 
-	res, err := c.GetRecentBlockhash(context.Background())
+	res, err := solana_client.GetRecentBlockhash(context.Background())
 	if err != nil {
 		log.Fatalf("get recent block hash error, err: %v\n", err)
 	}
@@ -632,7 +667,7 @@ func Test_Receive_request(t *testing.T) {
 		0102030405060708090a0b0c0d0e0f1011121314
 	*/
 
-	txSig, err := c.SendRawTransaction(context.Background(), rawTx)
+	txSig, err := solana_client.SendRawTransaction(context.Background(), rawTx)
 	if err != nil {
 		t.Fatalf("send tx error, err: %v\n", err)
 	}

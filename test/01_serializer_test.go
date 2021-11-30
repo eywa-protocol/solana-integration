@@ -14,14 +14,6 @@ import (
 	"gitlab.digiu.ai/blockchainlaboratory/eywa-solana-test/serializer"
 )
 
-func init() {
-	// "example.com/serializer"
-	// "github.com/portto/solana-go-sdk/types"
-	// "github.com/stretchr/testify/require"
-
-	// fmt.Println(serializer.Hello("world"))
-}
-
 func compareBytes(a []byte, b []byte) error {
 	fmt.Println("a:", a)
 	fmt.Println("b:", b)
