@@ -23,7 +23,6 @@ import (
 
 var (
 	conn *grpc.ClientConn
-	err  error
 )
 
 func Test_GRPC_SlotStream(t *testing.T) {

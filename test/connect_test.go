@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
+	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/gagliardetto/solana-go/rpc/ws"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
 	"log"
 	"reflect"
 	"testing"
@@ -21,12 +20,6 @@ import (
 	"github.com/portto/solana-go-sdk/types"
 	"gitlab.digiu.ai/blockchainlaboratory/eywa-solana-test/serializer"
 )
-
-var solana_client *client.Client
-var solana_ws_client *ws.Client
-
-var localSolanaUrl, localSolanaWSUrl string
-var accAdmin types.Account
 
 func SerializeData(data interface{}) ([]byte, error) {
 	return serializeData(reflect.ValueOf(data))
@@ -118,94 +111,6 @@ func serializeData(v reflect.Value) ([]byte, error) {
 	return nil, fmt.Errorf("unsupport type: %v", v.Kind())
 }
 
-func readAccountFromFile(filename string) (types.Account, error) {
-	plan, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return types.Account{}, err
-	}
-
-	var data []byte
-	err = json.Unmarshal(plan, &data)
-	if err != nil {
-		return types.Account{}, err
-	}
-	// fmt.Println("validator-keypair.json:", data)
-	acc := types.AccountFromPrivateKeyBytes(data)
-	return acc, nil
-}
-
-func init() {
-	// solana_client = client.NewClient(client.TestnetRPCEndpoint)
-	localSolanaUrl = "http://127.0.0.1:8899"
-	solana_client = client.NewClient(localSolanaUrl)
-	localSolanaWSUrl = "ws://127.0.0.1:8900"
-	solana_ws_client, err = ws.Connect(context.Background(), "ws://api.mainnet-beta.solana.com:80")
-	if err != nil {
-		panic(err)
-	}
-
-	accIdentity, err := readAccountFromFile("../localnet/ledger/validator-keypair.json")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("identity:", accIdentity.PublicKey.ToBase58())
-
-	balance, err := solana_client.GetBalance(context.Background(), accIdentity.PublicKey.ToBase58())
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("identity balance:", balance)
-
-	// create Admin test account
-	res, err := solana_client.GetRecentBlockhash(context.Background())
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("RecentBlockHash:", res.Blockhash)
-
-	accAdmin = types.NewAccount()
-	fmt.Println("Admin:", accAdmin.PublicKey.ToBase58())
-
-	balance, err = solana_client.GetBalance(context.Background(), accAdmin.PublicKey.ToBase58())
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Admin balance:", balance)
-
-	rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
-		Instructions: []types.Instruction{
-			sysprog.Transfer(
-				accIdentity.PublicKey, // from
-				accAdmin.PublicKey,    // to
-				10*1e9,                // 10 * 1 SOL
-			),
-		},
-		Signers:         []types.Account{accIdentity},
-		FeePayer:        accIdentity.PublicKey,
-		RecentBlockHash: res.Blockhash,
-	})
-	if err != nil {
-		panic(err)
-	}
-	txSig, err := solana_client.SendRawTransaction(context.Background(), rawTx)
-	if err != nil {
-		panic(err)
-	}
-	log.Println("txHash:", txSig)
-	for i := 0; i < 10; i++ {
-		fmt.Printf("%v ", i)
-		balance, err = solana_client.GetBalance(context.Background(), accAdmin.PublicKey.ToBase58())
-		if err != nil {
-			panic(err)
-		}
-		if balance != 0 {
-			break
-		}
-		time.Sleep(3 * time.Second)
-	}
-	fmt.Println("Admin balance:", balance)
-}
-
 func Test_testnet_connect(t *testing.T) {
 	resp, err := solana_client.GetVersion(context.Background())
 	require.NoError(t, err)
@@ -214,7 +119,7 @@ func Test_testnet_connect(t *testing.T) {
 
 func Test_WS_Connect(t *testing.T) {
 
-	client, err := ws.Connect(context.Background(), localSolanaWSUrl)
+	client, err := ws.Connect(context.Background(), rpc.LocalNet_WS)
 	require.NoError(t, err)
 	//if err != nil {
 	//	panic(err)
@@ -242,8 +147,7 @@ func Test_Stub(t *testing.T) {
 }
 
 func Test_local_connect(t *testing.T) {
-	local_client := client.NewClient(localSolanaUrl)
-	resp, err := local_client.GetVersion(context.Background())
+	resp, err := solana_client.GetVersion(context.Background())
 	require.NoError(t, err)
 	fmt.Println("local solana version:", resp.SolanaCore)
 }
