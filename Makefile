@@ -98,9 +98,6 @@ configure-solana-contracts-local:
 	npm run token:init:local
 	npm run token:init:local2
 
-
-
-
 test-serializer:
 	# go test -v ./test/01_serializer_test.go
 	go test -v ./test/01_serializer_test.go -run Test_Receive_request_serializer
@@ -109,6 +106,11 @@ test:
 	solana program deploy "./target/deploy/eywa_bridge.so"
 	go test -v ./test -run Test_Receive_request
 	# go test -v ./test
+
+test2:
+	solana program deploy -v --max-len 2000000 --program-id "./target/deploy/eywa_bridge-keypair.json" "./target/deploy/eywa_bridge.so"
+	sleep 5
+	go test -v ./test -run Test_oracle_request
 
 gen_proto:
 	protoc --proto_path=bridge-grpc/proto --go_out=bridge-grpc/proto --go_opt=paths=source_relative bridge-grpc/proto/eywa_solana.proto --go-grpc_out=bridge-grpc/proto --go-grpc_opt=paths=source_relative bridge-grpc/proto/eywa_solana.proto
