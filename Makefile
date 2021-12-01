@@ -109,7 +109,7 @@ test:
 
 test2:
 	solana program deploy -v --max-len 2000000 --program-id "./target/deploy/eywa_bridge-keypair.json" "./target/deploy/eywa_bridge.so"
-	sleep 5
+	sleep 20
 	go test -v ./test -run Test_oracle_request
 
 gen_proto:
