@@ -2,12 +2,13 @@ package test
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/davecgh/go-spew/spew"
 	"github.com/dfuse-io/logging"
 	"github.com/gagliardetto/solana-go"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-	"testing"
 )
 
 var zlog *zap.Logger
@@ -83,7 +84,7 @@ func Test_ProgramSubscribe(t *testing.T) {
 	zlog, _ = zap.NewDevelopment()
 
 	t.Log("Dialing")
-	programAccount, err := readAccountFromFile("../target/deploy/eywa_bridge-keypair.json")
+	programAccount, err := ReadAccountFromFile("../target/deploy/eywa_bridge-keypair.json")
 	require.NoError(t, err)
 	programID1 := programAccount.PublicKey
 	//programID := solana.MustPublicKeyFromBase58("DXUDgvk4YH47J2HzRDKAsp5zcrvWDXqsCbD3HTghpyCo")

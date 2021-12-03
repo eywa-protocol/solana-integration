@@ -104,11 +104,6 @@
           "isSigner": false
         },
         {
-          "name": "thisProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
@@ -124,15 +119,20 @@
           "isSigner": false
         },
         {
-          "name": "owner",
+          "name": "bridge",
           "isMut": false,
           "isSigner": true
         }
       ],
       "args": [
         {
-          "name": "bumpMint",
-          "type": "u8"
+          "name": "txId",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
         },
         {
           "name": "bumpRequest",
@@ -337,12 +337,12 @@
           "isSigner": false
         },
         {
-          "name": "tokenProgram",
+          "name": "owner",
           "isMut": false,
-          "isSigner": false
+          "isSigner": true
         },
         {
-          "name": "systemProgram",
+          "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
         },
@@ -352,9 +352,9 @@
           "isSigner": false
         },
         {
-          "name": "owner",
+          "name": "systemProgram",
           "isMut": false,
-          "isSigner": true
+          "isSigner": false
         }
       ],
       "args": [
@@ -616,12 +616,12 @@
           "isSigner": false
         },
         {
-          "name": "tokenProgram",
+          "name": "bridge",
           "isMut": false,
-          "isSigner": false
+          "isSigner": true
         },
         {
-          "name": "systemProgram",
+          "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
         },
@@ -631,9 +631,9 @@
           "isSigner": false
         },
         {
-          "name": "bridge",
+          "name": "systemProgram",
           "isMut": false,
-          "isSigner": true
+          "isSigner": false
         }
       ],
       "args": [
@@ -872,6 +872,15 @@
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "txId",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
           {
             "name": "bump",
             "type": "u8"
@@ -1287,6 +1296,6 @@
     }
   ],
   "metadata": {
-    "address": "7gRLkKiavHbYX29kjPrm2jXcrFYYEKZUrNUxmBTMBDtU"
+    "address": "AuzMXaqorC99B2aiaYhgFKpxiWKZU1TtCcZ9hSo9Cgz"
   }
 }

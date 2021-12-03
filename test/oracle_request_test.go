@@ -59,22 +59,22 @@ func BuildIxTestOracleRequest(
 }
 
 func Test_oracle_request(t *testing.T) {
-	localSolanaUrl = "http://127.0.0.1:8899"
-	c = client.NewClient(localSolanaUrl)
+	// localSolanaUrl = "http://127.0.0.1:8899"
+	// c = client.NewClient(localSolanaUrl)
 
-	resp, err := c.GetVersion(context.Background())
+	resp, err := solana_client.GetVersion(context.Background())
 	require.NoError(t, err)
 	t.Log("testnet solana version:", resp.SolanaCore)
 
 	// проверяем наличие деплоя
-	program, err := readAccountFromFile("../target/deploy/eywa_bridge-keypair.json")
+	program, err := ReadAccountFromFile("../target/deploy/eywa_bridge-keypair.json")
 	if err != nil {
 		log.Fatalln("read pid error", err)
 	}
 	t.Log("program account:", program.PublicKey.ToBase58())
 	t.Logf("program account: %x\n", program.PublicKey.Bytes())
 
-	info, err := c.GetAccountInfo(
+	info, err := solana_client.GetAccountInfo(
 		context.Background(),
 		program.PublicKey.ToBase58(),
 		client.GetAccountInfoConfig{
@@ -91,7 +91,7 @@ func Test_oracle_request(t *testing.T) {
 	require.NotNil(t, info)
 	t.Log("program:", info)
 
-	accIdentity, err := readAccountFromFile("../localnet/ledger/validator-keypair.json")
+	accIdentity, err := ReadAccountFromFile("../localnet/ledger/validator-keypair.json")
 	if err != nil {
 		panic(err)
 	}
@@ -124,7 +124,7 @@ func Test_oracle_request(t *testing.T) {
 		accIdentity.PublicKey,
 	)
 
-	res, err := c.GetRecentBlockhash(context.Background())
+	res, err := solana_client.GetRecentBlockhash(context.Background())
 	if err != nil {
 		log.Fatalf("get recent block hash error, err: %v\n", err)
 	}
@@ -146,7 +146,7 @@ func Test_oracle_request(t *testing.T) {
 
 	t.Logf("rawTx: %x\n", rawTx)
 
-	txSig, err := c.SendRawTransaction(context.Background(), rawTx)
+	txSig, err := solana_client.SendRawTransaction(context.Background(), rawTx)
 	if err != nil {
 		t.Fatalf("send tx error, err: %v\n", err)
 	}

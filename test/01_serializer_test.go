@@ -20,47 +20,30 @@ func compareBytes(a []byte, b []byte) error {
 	return nil
 }
 
-// type CreateRepresentationData struct {
-// 	X uint64
-// 	Y string
-// 	Z string `borsh_skip:"true"` // will skip this field when serializing/deserializing
-// }
-
 func CreateRepresentation(
 	pidThisProgram common.PublicKey,
 	pubMint common.PublicKey,
 	pubMintData common.PublicKey,
 	pubOwner common.PublicKey,
-	tokenReal [20]uint8, // [u8; 20], // String, // H160, // real token for synt
-	// [pubMint] tokenSynt common.PublicKey,
-	syntName string, // synt name
-	syntSymbol string, // synt short name
-	syntDecimals uint8, // u8
+	tokenReal [20]uint8,
+	syntName string,
+	syntSymbol string,
+	syntDecimals uint8,
 ) types.Instruction {
-	// EywaBridgeSolanaInstruction := struct {
-	// 	CreateRepresentation [8]uint8{x96, x98, x15, x35, x09, x07, xB1, xAC}
-	// }
-	// "github.com/near/borsh-go"
-	// x := A{
-	// 	X: 3301,
-	// 	Y: "liber primus",
-	// }
-	// data1, err := borsh.Serialize(x)
 
-	// createRepresentation <Buffer 96 98 15 35 09 07 b1 ac>
 	InstructionCreateRepresentation := [8]uint8{
 		0x96, 0x98, 0x15, 0x35, 0x09, 0x07, 0xB1, 0xAC,
 	}
 
 	data, err := common.SerializeData(struct {
 		Instruction   [8]uint8
-		tokenReal     [20]uint8 // [u8; 20], // String, // H160, // real token for synt
+		tokenReal     [20]uint8
 		tokenSynt     common.PublicKey
 		syntNameLen   uint32
-		syntName      string // synt name
+		syntName      string
 		syntSymbolLen uint32
-		syntSymbol    string // synt short name
-		syntDecimals  uint8  // u8
+		syntSymbol    string
+		syntDecimals  uint8
 	}{
 		Instruction:   InstructionCreateRepresentation,
 		tokenReal:     tokenReal,
@@ -78,53 +61,16 @@ func CreateRepresentation(
 	return types.Instruction{
 		ProgramID: pidThisProgram,
 		Accounts: []types.AccountMeta{
-			// mint: mintSynt.publicKey,
 			{PubKey: pubMint, IsSigner: false, IsWritable: true},
-			// mintData: mintSyntData.publicKey,
 			{PubKey: pubMintData, IsSigner: false, IsWritable: true},
-			// rent: anchor.web3.SYSVAR_RENT_PUBKEY,
 			{PubKey: common.SysVarRentPubkey, IsSigner: false, IsWritable: false},
-			// owner: accAdmin.publicKey,
 			{PubKey: pubOwner, IsSigner: true, IsWritable: true},
 		},
 		Data: data,
 	}
-	/*
-		#[derive(Accounts)]
-		pub struct CreateRepresentation<'info> {
-			#[account(mut)]
-			mint: AccountInfo<'info>,
-			#[account(init)]
-			mint_data: ProgramAccount<'info, MintData>,
-			rent: Sysvar<'info, Rent>,
-			// #[account(mut, has_one = owner)]
-			// pub data: ProgramAccount<'info, DataAccount>,
-			#[account(signer)]
-			pub owner: AccountInfo<'info>,
-		}
-	*/
-
 }
 
-/*
-028c3b8a9325bb8b71b7d35e49803c373aa62d133abed92c8526180659154cf0
-41fbc42ef11ed82cb55a7d2a7e6f42767fcf00fe58c240aeea7f48640edf648e
-0f1837831228d223f57acabcca3eea983ed5ece4168031e9ab9509046ef32be1
-e01f75fd307aad5c6341642b4d35176800143de97f86e4c75c9fcd5f58cb4371
-0002000103f819bb622b45ae71d9665206d824a70c1148ef123597cddfa3a1b3
-a8d1e33e8831254aa520250238a19c559e53c90a8ab20f18bea83d3bf6eb0ee4
-fb272c5db4000000000000000000000000000000000000000000000000000000
-0000000000d6f4e69b75da0e0d1f0e6ca2c07fe4c2f78c114fd7ab1e3a023289
-8bc5a7e5d50102020001340000000080969800000000000a0000000000000063
-3ac5ebf3ca180cd17e6342f748e46da5f564d775a60b8e1d9b407450d76230
-*/
-
 func Test_serializer(t *testing.T) {
-	// acc := types.AccountMeta{
-	// 	PubKey:     [32]byte{},
-	// 	IsSigner:   false,
-	// 	IsWritable: false,
-	// }
 
 	acc1 := types.AccountFromPrivateKeyBytes([]byte{
 		149, 63, 8, 13, 195, 113, 123, 153, 126, 15, 4, 101, 143, 60, 220, 156,
@@ -175,15 +121,13 @@ func Test_serializer(t *testing.T) {
 	)
 
 	src := []byte("1234567890123456789012345678901234567890")
-	decocedLen := hex.DecodedLen(len(src))
-	// dst := make([]byte, hex.DecodedLen(len(src)))
-	dst := make([]byte, decocedLen)
-	// dst := [20]byte{}
+	decodedLen := hex.DecodedLen(len(src))
+	dst := make([]byte, decodedLen)
 	n, err := hex.Decode(dst, src)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("[%d]%x\n", decocedLen, dst[:n])
+	fmt.Printf("[%d]%x\n", decodedLen, dst[:n])
 
 	tokenReal := [20]byte{}
 	copy(tokenReal[:], dst)
@@ -193,22 +137,13 @@ func Test_serializer(t *testing.T) {
 		accMintSynt.PublicKey,
 		accMintSyntData.PublicKey,
 		accAdmin.PublicKey,
-		tokenReal, // tokenReal [20]uint8, // [u8; 20], // String, // H160, // real token for synt
-		// accMintSynt, // tokenSynt common.PublicKey,
-		"Some Synt Name", // syntName string, // synt name
-		"SSN",            // syntSymbol string, // synt short name
-		2,                // syntDecimals uint8, // u8
+		tokenReal,
+		"Some Synt Name",
+		"SSN",
+		2,
 	)
-	/*
-		1234567890123456789012345678901234567890 // token_real: [u8; 20] (b 20)
-		d7ad606dbc8c75788e3b3b077ebc327bdfaaf7851b17d992d5d2fcd28bdf87d9 // accMintSynt (b 32)
-		0e000000536f6d652053796e74204e616d65 // 'Some Synt Name' (b 18)
-		0300000053534e // 'SSN' (b 07)
-		02 // decimals (b 01)
-	*/
 
 	ixInitializeMintAccount := tokenprog.InitializeMint(
-		// ixInitializeMint := InitializeMint(
 		2,
 		accMintSynt.PublicKey,
 		accAdmin.PublicKey,
@@ -236,51 +171,7 @@ func Test_serializer(t *testing.T) {
 	fmt.Println("rawTx:")
 	fmt.Printf("%x\n", rawTx)
 
-	/*
-		03
-		fecef077ed0c9fe5b731e885e1d0de023772d6ae6719a6a89b070e7ab1bd0934
-		af4b639b7154b66570cd79c5fc74cf5fffedfa6a0c62e73e48e0b3da038a3f0a
-		c2dc59a9fbb6d2bf61daaa621176d11b9a4b7eb37e4ac72b6dca40eea1b375ed
-		9939b719170b7a6f99d11b98f778738c80d01fd7c69941614b5662bb4441be0c
-		2cada82da8bf9581e6f55bb20cf72a86d00fba8fc77c541bf7020af38faefedd
-		01f37c044dce311a724f8fd89aa47b3d3cdf83e157e3054c26dcc89bf9176808
-
-		03
-		00
-		03
-		06
-		d060f073ef7097477eccf3be371a8226874d37b387a714762f458e7a2a3ce1ff
-		81e8a67b5d39cccdd2790b2d4f279d6e2df2ff5b2f3ff812db38ef671ebcd8ce
-		fb2bae5aaf706a7cda1864b1c0e1c0469c96c65b01a4d81922669740cf137cc5
-		0000000000000000000000000000000000000000000000000000000000000000
-		06a7d517192c5c51218cc94c3d4af17f58daee089ba1fd44e3dbd98a00000000
-		06ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a9
-		a05fed635d7688b88ba4356571af306ce2b3e7e80d3773d53280b722c4904e4c
-		03
-		03
-		02
-		00
-		02
-		34
-		00000000
-		00ca9a3b00000000
-		e803000000000000
-		06ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a9
-		03
-		02
-		00
-		01
-		34
-		00000000
-		00ca9a3b00000000
-		e803000000000000
-		9dac74ef70b0a37a8cc6d2b8ebd837b2669b4f125218cf40ef016dbba3d9706a
-		05020204430002d060f073ef7097477eccf3be371a8226874d37b387a714762f458e7a2a3ce1ff01d060f073ef7097477eccf3be371a8226874d37b387a714762f458e7a2a3ce1ff
-	*/
-
 	require.NoError(t, compareBytes([]byte{1}, []byte{2}))
-
-	// ix.
 }
 
 func Test_Receive_request_serializer(t *testing.T) {
@@ -303,13 +194,7 @@ func Test_Receive_request_serializer(t *testing.T) {
 		panic(err)
 	}
 	fmt.Printf("sInstData: %x\n", sInstData)
-	/*
-		06d7253986b0571fb09c9adaf797199954bd81fad9965ab239ced0a200000000 // pidThisProgram
-		f819bb622b45ae71d9665206d824a70c1148ef123597cddfa3a1b3a8d1e33e88 // pubAdmin
-		95763bdcc47fa1b3 // InstructionHello
-		05000000 // len(""World"")
-		576f726c64 // "World"
-	*/
+
 	InstructionReceiveRequest := [8]uint8{
 		92, 46, 108, 42, 179, 64, 8, 139,
 	}
@@ -366,63 +251,4 @@ func Test_Receive_request_serializer(t *testing.T) {
 	}
 
 	fmt.Printf("rawTx: %x\n", rawTx)
-	/*
-		01
-		328a72d36109f193acc12ed54795450168b915807617a332dc9030a2d5ea957a
-		354f253943fa633feec27adb0ae49a292d7c8b91fa4b4c81075b722c625b0c00
-		01
-		00
-		01
-		02
-		f819bb622b45ae71d9665206d824a70c1148ef123597cddfa3a1b3a8d1e33e88
-		06d7253986b0571fb09c9adaf797199954bd81fad9965ab239ced0a200000000
-		d6f4e69b75da0e0d1f0e6ca2c07fe4c2f78c114fd7ab1e3a0232898bc5a7e5d5
-		01
-		01
-		03
-		00
-		01
-		00
-		8d015c2e6c2ab340088b
-		0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20
-		06d7253986b0571fb09c9adaf797199954bd81fad9965ab239ced0a200000000
-		f819bb622b45ae71d9665206d824a70c1148ef123597cddfa3a1b3a8d1e33e88
-		95763bdcc47fa1b3
-		05000000
-		576f726c64
-		0102030405060708090a0b0c0d0e0f1011121314
-
-		js
-		01
-		e2fe190b11963994db3ececbeb4dc77e01fda23b4f301dff1721e87103748feb
-		1b38785df859d986c0f42f441ccbdc3a9d15fc5ee31542fd3337327264057009
-		01
-		00
-		01
-		03
-		5452c64aecb2b837edd5fcd03f78bd554fae621ae7e5a31f7a976c8105900b57
-		ad5dbbc2d1b9f569e18312800a127ce31e121b49955d47ab0605199571d58817
-		7ed5e109f6a55b74e1d1f8e7592453f8ff6d83b68efdc7a229e1e32132b575b1
-		4c958442a762095cc4d36c703d19084fd4f286141dfba574c2008789cce4e10a
-		01020401000200
-		97
-		015c2e6c2ab340088b
-		1122334455667788990011223344556677889900112233445566778899001122
-		01
-		00
-		00
-		00
-		5452c64aecb2b837edd5fcd03f78bd554fae621ae7e5a31f7a976c8105900b57
-		00
-		00
-		7ed5e109f6a55b74e1d1f8e7592453f8ff6d83b68efdc7a229e1e32132b575b1
-		11
-		00
-		00
-		00
-		95763bdcc47fa1b3
-		05000000
-		576f726c64
-		1122334455667788990011223344556677889900
-	*/
 }

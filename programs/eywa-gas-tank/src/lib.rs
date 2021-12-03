@@ -8,7 +8,7 @@ use anchor_lang::{
 };
 
 
-declare_id!("Ag6uLU9SnrX3VwbGvZTPjToaPg3x7DxuPQezU8t5GLKa");
+std::include!("pid.in");
 
 #[program]
 pub mod eywa_gas_tank {
