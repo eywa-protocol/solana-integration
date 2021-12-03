@@ -18,7 +18,7 @@ var solana_client *client.Client
 var solana_ws_client *ws.Client
 
 var bridge_prgrm_json string
-var accAdmin types.Account
+var accAdmin, program types.Account
 var err error
 
 func init() {
@@ -28,7 +28,10 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-
+	program, err = readAccountFromFile(bridge_prgrm_json)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func readAccountFromFile(filename string) (types.Account, error) {

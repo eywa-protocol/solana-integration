@@ -57,17 +57,13 @@ func BuildIxTestOracleRequest(
 	}
 }
 
-
 func Test_oracle_request(t *testing.T) {
 	resp, err := solana_client.GetVersion(context.Background())
 	require.NoError(t, err)
 	t.Log("testnet solana version:", resp.SolanaCore)
 
 	// проверяем наличие деплоя
-	program, err := readAccountFromFile("../target/deploy/eywa_bridge-keypair.json")
-	if err != nil {
-		log.Fatalln("read pid error", err)
-	}
+
 	t.Log("program account:", program.PublicKey.ToBase58())
 	t.Logf("program account: %x\n", program.PublicKey.Bytes())
 
@@ -151,6 +147,3 @@ func Test_oracle_request(t *testing.T) {
 
 	t.Log("txHash:", txSig)
 }
-
-
-

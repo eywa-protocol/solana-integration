@@ -2,14 +2,12 @@ package test
 
 import (
 	"context"
-	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/gagliardetto/solana-go/rpc/ws"
 	"github.com/stretchr/testify/require"
 	"log"
-	"reflect"
 	"testing"
 	"time"
 
@@ -21,96 +19,6 @@ import (
 	"gitlab.digiu.ai/blockchainlaboratory/eywa-solana-test/serializer"
 )
 
-func SerializeData(data interface{}) ([]byte, error) {
-	return serializeData(reflect.ValueOf(data))
-}
-
-func serializeData(v reflect.Value) ([]byte, error) {
-	fmt.Println("v.Kind()")
-	fmt.Println(v.Kind())
-	fmt.Println("v.Type()")
-	fmt.Println(v.Type())
-	if reflect.Slice == v.Kind() || reflect.Array == v.Kind() {
-		fmt.Println("v.Type().Elem().Kind()")
-		fmt.Println(v.Type().Elem().Kind())
-	}
-
-	switch v.Kind() {
-	case reflect.Bool:
-		if v.Bool() {
-			return []byte{1}, nil
-		}
-		return []byte{0}, nil
-	case reflect.Uint8:
-		return []byte{uint8(v.Uint())}, nil
-	case reflect.Int16:
-		b := make([]byte, 2)
-		binary.LittleEndian.PutUint16(b, uint16(v.Int()))
-		return b, nil
-	case reflect.Uint16:
-		b := make([]byte, 2)
-		binary.LittleEndian.PutUint16(b, uint16(v.Uint()))
-		return b, nil
-	case reflect.Int32:
-		b := make([]byte, 4)
-		binary.LittleEndian.PutUint32(b, uint32(v.Int()))
-		return b, nil
-	case reflect.Uint32:
-		b := make([]byte, 4)
-		binary.LittleEndian.PutUint32(b, uint32(v.Uint()))
-		return b, nil
-	case reflect.Int64:
-		b := make([]byte, 8)
-		binary.LittleEndian.PutUint64(b, uint64(v.Int()))
-		return b, nil
-	case reflect.Uint64:
-		b := make([]byte, 8)
-		binary.LittleEndian.PutUint64(b, v.Uint())
-		return b, nil
-	case reflect.Slice, reflect.Array:
-		switch v.Type().Elem().Kind() {
-		case reflect.Uint8:
-			b := make([]byte, 0, v.Len())
-			for i := 0; i < v.Len(); i++ {
-				b = append(b, byte(v.Index(i).Uint()))
-			}
-			return b, nil
-		case reflect.Struct:
-			fmt.Println("v.Type().Elem().Kind():", v.Type().Elem().Kind())
-			fmt.Println("v.Type().Elem().String():", v.Type().Elem().String())
-			if v.Type().Elem().String() == "test.TransactionAccount" {
-				fmt.Println("v.Type().Elem().Type() == TransactionAccount")
-				b := make([]byte, 0, v.Len()*1000)
-				for i := 0; i < v.Len(); i++ {
-					d, err := serializeData(v.Index(i))
-					if err != nil {
-						return nil, err
-					}
-					b = append(b, d...)
-				}
-				return b, nil
-			} else {
-				fmt.Println("v.Type().Elem().Type() != TransactionAccount")
-			}
-		}
-		return nil, fmt.Errorf("unsupport type: %v, elem: %v", v.Kind(), v.Elem().Kind())
-	case reflect.String:
-		return []byte(v.String()), nil
-	case reflect.Struct:
-		data := make([]byte, 0, 1024)
-		for i := 0; i < v.NumField(); i++ {
-			field := v.Field(i)
-			d, err := serializeData(field)
-			if err != nil {
-				return nil, err
-			}
-			data = append(data, d...)
-		}
-		return data, nil
-	}
-	return nil, fmt.Errorf("unsupport type: %v", v.Kind())
-}
-
 func Test_testnet_connect(t *testing.T) {
 	resp, err := solana_client.GetVersion(context.Background())
 	require.NoError(t, err)
@@ -121,29 +29,8 @@ func Test_WS_Connect(t *testing.T) {
 
 	client, err := ws.Connect(context.Background(), rpc.LocalNet_WS)
 	require.NoError(t, err)
-	//if err != nil {
-	//	panic(err)
-	//}
 
 	client.Close()
-	//
-	//resp, err := solana_client.GetVersion(context.Background())
-	//require.NoError(t, err)
-	//t.Log("testnet solana version:", resp.SolanaCore)
-}
-
-//func Test_Account(t *testing.T) {
-//
-//	resp, err := solana_client.GetVersion(context.Background())
-//	require.NoError(t, err)
-//	t.Log("testnet solana version:", resp.SolanaCore)
-//
-//	program := solana.MustPublicKeyFromBase58("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin")
-//	require.True(t, program)
-//}
-
-func Test_Stub(t *testing.T) {
-	// localSolanaUrl = "http://127.0.0.1:8899"
 }
 
 func Test_local_connect(t *testing.T) {
@@ -224,11 +111,7 @@ func Test_Simple_transfer(t *testing.T) {
 }
 
 func Test_Create_representation(t *testing.T) {
-	//init_()
-	program, err := readAccountFromFile("../target/deploy/eywa_bridge-keypair.json")
-	if err != nil {
-		log.Fatalln("read pid error", err)
-	}
+
 	t.Log("program account:", program.PublicKey.ToBase58())
 	t.Logf("program account: %x\n", program.PublicKey.Bytes())
 
@@ -356,104 +239,21 @@ func Test_Create_representation(t *testing.T) {
 }
 
 func Test_Receive_request(t *testing.T) {
-	//init()
-	program, err := readAccountFromFile("../target/deploy/eywa_bridge-keypair.json")
-	if err != nil {
-		log.Fatalln("read pid error", err)
-	}
+
 	pidThisProgram := program.PublicKey
 	t.Log("program account:", pidThisProgram.ToBase58())
 	t.Logf("program account: %x\n", pidThisProgram.Bytes())
-	/*
-	       const ixHello = await program.instruction.hello('World', {
-	         accounts: {
-	           person: provider.wallet.publicKey,
-	         },
-	       });
-	   	accAdmin
-	*/
-
-	// // [149, 118, 59, 220, 196, 127, 161, 179]
-	// // 95763bdcc47fa1b3
-	// InstructionHello := [8]uint8{
-	// 	149, 118, 59, 220, 196, 127, 161, 179,
-	// }
-	// t.Logf("InstructionHello: %x\n", InstructionHello)
 
 	personName := "World"
-	// dataHello, err := common.SerializeData(struct {
-	// 	Instruction [8]uint8
-	// 	nameLen     uint32
-	// 	name        string
-	// }{
-	// 	Instruction: InstructionHello,
-	// 	nameLen:     uint32(len(personName)),
-	// 	name:        personName,
-	// })
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// t.Logf("dataHello: %x\n", dataHello)
 
 	pubAdmin := accAdmin.PublicKey
-	/*
-		ixHello := types.Instruction{
-			ProgramID: pidThisProgram,
-			Accounts: []types.AccountMeta{
-				// person: provider.wallet.publicKey,
-				{PubKey: pubAdmin, IsSigner: true, IsWritable: false},
-			},
-			Data: dataHello,
-		}
-	*/
 	ixHello := serializer.CreateHelloInstruction(personName, pidThisProgram, pubAdmin)
-
-	/*
-	   const si: StandaloneInstruction = {
-	     programId: ixHello.programId,
-	     accounts: ixHello.keys as TransactionAccount[],
-	     data: ixHello.data,
-	   }
-	*/
-
-	// sInst, err := SerializeData(struct {
-	// 	ProgramID [32]uint8
-	// 	Accounts  []TransactionAccount
-	// 	Data      []byte
-	// }{
 	sInst := serializer.CreateStandaloneInstruction(ixHello)
-	// sInst := serializer.StandaloneInstruction{
-	// 	ProgramId: serializer.UInt256(pidThisProgram),
-	// 	Accounts: []serializer.TransactionAccount{
-	// 		{
-	// 			PubKey:     serializer.UInt256(pubAdmin),
-	// 			IsSigner:   true,
-	// 			IsWritable: false,
-	// 		},
-	// 	},
-	// 	Data: dataHello,
-	// }
 	sInstData, err := sInst.Serialize()
 	if err != nil {
 		panic(err)
 	}
 	t.Logf("sInstData: %x\n", sInstData)
-
-	/*
-	   const ixReceiveRequest = await program.state.instruction.receiveRequest(
-	     Buffer.from('1122334455667788990011223344556677889900112233445566778899001122', 'hex'), // req_id: [u8; 32], // bytes32 reqId,
-	     si, // sinst: StandaloneInstruction, // bytes memory b, address receiveSide,
-	     Buffer.from('1122334455667788990011223344556677889900', 'hex'), // bridge_from: [u8; 20], // address bridgeFrom
-	   {
-	     accounts: {
-	       proposer: accAdmin.publicKey,
-	     },
-	     remainingAccounts: [
-	       { pubkey: program.programId, isWritable: false, isSigner: false },
-	       { pubkey: provider.wallet.publicKey, isWritable: false, isSigner: false },
-	     ],
-	   });
-	*/
 	InstructionReceiveRequest := [8]uint8{
 		92, 46, 108, 42, 179, 64, 8, 139,
 	}
@@ -514,62 +314,6 @@ func Test_Receive_request(t *testing.T) {
 	}
 
 	t.Logf("rawTx: %x\n", rawTx)
-	/*
-		01
-		ad41459031dfe43fbeb0229c8f9d75f1ec6ce1a4e6c805dfb2c7c977f21dd306
-		17f1ec18b2432b8a5900b414f5ed3a711c7e66ab1339bf13ccb5122cf4211f07
-		01
-		00
-		01
-		02
-		617f2d66269167267f5044b702a3eac1274c317eb0804c4ae26a30aff3fe8ecc
-		e9c308b998808316e4ad0c5d65bb34c75f03e4dbf4ccc609a362c5bf2e470fe5
-		5d2ed8e5f2605085acd6663b78d0b444af6633937a7974738cebdb5a204f10f6
-		01
-		01
-		03
-		00
-		01
-		00
-		8f0195763bdcc47fa1b3
-		0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20
-		e9c308b998808316e4ad0c5d65bb34c75f03e4dbf4ccc609a362c5bf2e470fe5
-		617f2d66269167267f5044b702a3eac1274c317eb0804c4ae26a30aff3fe8ecc
-		01
-		00
-		95763bdcc47fa1b
-		30
-		5000000
-		576f726c64
-
-		0102030405060708090a0b0c0d0e0f1011121314
-
-		01
-		5535e550dd5aa7b4c6f6f59de1dc380702fbd3a5905cc0f0f041c2dc7a831a5a
-		2d0d0d3545452446fb8f8f4d4ddf51e63a43fadd7e35a4932ba47b09997be90f
-		01
-		00
-		01
-		02
-		77b378f0399a3dfb259388a506282243a8f73150e4e1638118d0f687332fbcf0
-		e9c308b998808316e4ad0c5d65bb34c75f03e4dbf4ccc609a362c5bf2e470fe5
-		6ecc7bcf877bb618db5f7c359d9e16c107b434319f89a7f0326923a0b9170792
-		01
-		01
-		03
-		00
-		01
-		00
-		8d
-		015c2e6c2ab340088b
-		0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20
-		e9c308b998808316e4ad0c5d65bb34c75f03e4dbf4ccc609a362c5bf2e470fe5
-		77b378f0399a3dfb259388a506282243a8f73150e4e1638118d0f687332fbcf0
-		95763bdcc47fa1b3
-		05000000
-		576f726c64
-		0102030405060708090a0b0c0d0e0f1011121314
-	*/
 
 	txSig, err := solana_client.SendRawTransaction(context.Background(), rawTx)
 	if err != nil {
