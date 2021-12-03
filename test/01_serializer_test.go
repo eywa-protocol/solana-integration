@@ -20,32 +20,30 @@ func compareBytes(a []byte, b []byte) error {
 	return nil
 }
 
-
-
 func CreateRepresentation(
 	pidThisProgram common.PublicKey,
 	pubMint common.PublicKey,
 	pubMintData common.PublicKey,
 	pubOwner common.PublicKey,
-	tokenReal [20]uint8, // [u8; 20], // String, // H160, // real token for synt
-	// [pubMint] tokenSynt common.PublicKey,
-	syntName string, // synt name
-	syntSymbol string, // synt short name
-	syntDecimals uint8, // u8
+	tokenReal [20]uint8,
+	syntName string,
+	syntSymbol string,
+	syntDecimals uint8,
 ) types.Instruction {
+
 	InstructionCreateRepresentation := [8]uint8{
 		0x96, 0x98, 0x15, 0x35, 0x09, 0x07, 0xB1, 0xAC,
 	}
 
 	data, err := common.SerializeData(struct {
 		Instruction   [8]uint8
-		tokenReal     [20]uint8 // [u8; 20], // String, // H160, // real token for synt
+		tokenReal     [20]uint8
 		tokenSynt     common.PublicKey
 		syntNameLen   uint32
-		syntName      string // synt name
+		syntName      string
 		syntSymbolLen uint32
-		syntSymbol    string // synt short name
-		syntDecimals  uint8  // u8
+		syntSymbol    string
+		syntDecimals  uint8
 	}{
 		Instruction:   InstructionCreateRepresentation,
 		tokenReal:     tokenReal,
@@ -63,20 +61,14 @@ func CreateRepresentation(
 	return types.Instruction{
 		ProgramID: pidThisProgram,
 		Accounts: []types.AccountMeta{
-			// mint: mintSynt.publicKey,
 			{PubKey: pubMint, IsSigner: false, IsWritable: true},
-			// mintData: mintSyntData.publicKey,
 			{PubKey: pubMintData, IsSigner: false, IsWritable: true},
-			// rent: anchor.web3.SYSVAR_RENT_PUBKEY,
 			{PubKey: common.SysVarRentPubkey, IsSigner: false, IsWritable: false},
-			// owner: accAdmin.publicKey,
 			{PubKey: pubOwner, IsSigner: true, IsWritable: true},
 		},
 		Data: data,
 	}
-
 }
-
 
 func Test_serializer(t *testing.T) {
 
@@ -129,15 +121,13 @@ func Test_serializer(t *testing.T) {
 	)
 
 	src := []byte("1234567890123456789012345678901234567890")
-	decocedLen := hex.DecodedLen(len(src))
-	// dst := make([]byte, hex.DecodedLen(len(src)))
-	dst := make([]byte, decocedLen)
-	// dst := [20]byte{}
+	decodedLen := hex.DecodedLen(len(src))
+	dst := make([]byte, decodedLen)
 	n, err := hex.Decode(dst, src)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("[%d]%x\n", decocedLen, dst[:n])
+	fmt.Printf("[%d]%x\n", decodedLen, dst[:n])
 
 	tokenReal := [20]byte{}
 	copy(tokenReal[:], dst)
@@ -147,15 +137,13 @@ func Test_serializer(t *testing.T) {
 		accMintSynt.PublicKey,
 		accMintSyntData.PublicKey,
 		accAdmin.PublicKey,
-		tokenReal, // tokenReal [20]uint8, // [u8; 20], // String, // H160, // real token for synt
-		// accMintSynt, // tokenSynt common.PublicKey,
-		"Some Synt Name", // syntName string, // synt name
-		"SSN",            // syntSymbol string, // synt short name
-		2,                // syntDecimals uint8, // u8
+		tokenReal,
+		"Some Synt Name",
+		"SSN",
+		2,
 	)
 
 	ixInitializeMintAccount := tokenprog.InitializeMint(
-		// ixInitializeMint := InitializeMint(
 		2,
 		accMintSynt.PublicKey,
 		accAdmin.PublicKey,
@@ -183,9 +171,7 @@ func Test_serializer(t *testing.T) {
 	fmt.Println("rawTx:")
 	fmt.Printf("%x\n", rawTx)
 
-
 	require.NoError(t, compareBytes([]byte{1}, []byte{2}))
-
 }
 
 func Test_Receive_request_serializer(t *testing.T) {
@@ -208,6 +194,7 @@ func Test_Receive_request_serializer(t *testing.T) {
 		panic(err)
 	}
 	fmt.Printf("sInstData: %x\n", sInstData)
+
 	InstructionReceiveRequest := [8]uint8{
 		92, 46, 108, 42, 179, 64, 8, 139,
 	}

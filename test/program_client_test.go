@@ -84,7 +84,7 @@ func Test_ProgramSubscribe(t *testing.T) {
 	zlog, _ = zap.NewDevelopment()
 
 	t.Log("Dialing")
-	programAccount, err := ReadAccountFromFile("../target/deploy/eywa_bridge-keypair.json")
+	programAccount, err := readAccountFromFile("../target/deploy/eywa_bridge-keypair.json")
 	require.NoError(t, err)
 	programID1 := programAccount.PublicKey
 	//programID := solana.MustPublicKeyFromBase58("DXUDgvk4YH47J2HzRDKAsp5zcrvWDXqsCbD3HTghpyCo")

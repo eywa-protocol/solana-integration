@@ -21,8 +21,7 @@ import (
 // }
 
 func Test_Receive_request(t *testing.T) {
-	//init()
-	program, err := ReadAccountFromFile("../target/deploy/eywa_bridge-keypair.json")
+	program, err := readAccountFromFile("../target/deploy/eywa_bridge-keypair.json")
 	if err != nil {
 		log.Fatalln("read pid error", err)
 	}

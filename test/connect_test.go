@@ -4,19 +4,19 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"github.com/gagliardetto/solana-go/rpc"
-	"github.com/gagliardetto/solana-go/rpc/ws"
-	"github.com/stretchr/testify/require"
 	"log"
 	"testing"
 	"time"
+
+	"github.com/gagliardetto/solana-go/rpc"
+	"github.com/gagliardetto/solana-go/rpc/ws"
+	"github.com/stretchr/testify/require"
 
 	"github.com/portto/solana-go-sdk/client"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/sysprog"
 	"github.com/portto/solana-go-sdk/tokenprog"
 	"github.com/portto/solana-go-sdk/types"
-	"gitlab.digiu.ai/blockchainlaboratory/eywa-solana-test/serializer"
 )
 
 func Test_testnet_connect(t *testing.T) {
@@ -220,91 +220,6 @@ func Test_Create_representation(t *testing.T) {
 			accAdmin,
 			accMintSynt,
 			accMintSyntData,
-		},
-		FeePayer:        accAdmin.PublicKey,
-		RecentBlockHash: res.Blockhash,
-	})
-	if err != nil {
-		log.Fatalf("generate tx error, err: %v\n", err)
-	}
-
-	t.Logf("rawTx: %x\n", rawTx)
-
-	txSig, err := solana_client.SendRawTransaction(context.Background(), rawTx)
-	if err != nil {
-		t.Fatalf("send tx error, err: %v\n", err)
-	}
-
-	t.Log("txHash:", txSig)
-}
-
-func Test_Receive_request(t *testing.T) {
-
-	pidThisProgram := program.PublicKey
-	t.Log("program account:", pidThisProgram.ToBase58())
-	t.Logf("program account: %x\n", pidThisProgram.Bytes())
-
-	personName := "World"
-
-	pubAdmin := accAdmin.PublicKey
-	ixHello := serializer.CreateHelloInstruction(personName, pidThisProgram, pubAdmin)
-	sInst := serializer.CreateStandaloneInstruction(ixHello)
-	sInstData, err := sInst.Serialize()
-	if err != nil {
-		panic(err)
-	}
-	t.Logf("sInstData: %x\n", sInstData)
-	InstructionReceiveRequest := [8]uint8{
-		92, 46, 108, 42, 179, 64, 8, 139,
-	}
-	t.Logf("InstructionReceiveRequest: %x\n", InstructionReceiveRequest)
-
-	// personName := "World"
-	dataReceiveRequest, err := common.SerializeData(struct {
-		Instruction [8]uint8
-		ReqId       [32]uint8
-		SInst       []byte
-		BridgeFrom  [20]uint8
-	}{
-		Instruction: InstructionReceiveRequest,
-		ReqId: [32]uint8{
-			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-			21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
-		},
-		SInst: sInstData,
-		BridgeFrom: [20]uint8{
-			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
-	t.Logf("dataReceiveRequest: %x\n", dataReceiveRequest)
-
-	ixReceiveRequest := types.Instruction{
-		ProgramID: pidThisProgram,
-		Accounts: []types.AccountMeta{
-			// person: provider.wallet.publicKey,
-			{PubKey: pubAdmin, IsSigner: true, IsWritable: false},
-			{PubKey: pidThisProgram, IsWritable: false, IsSigner: false},
-			{PubKey: pubAdmin, IsWritable: false, IsSigner: false},
-		},
-		Data: dataReceiveRequest,
-	}
-
-	res, err := solana_client.GetRecentBlockhash(context.Background())
-	if err != nil {
-		log.Fatalf("get recent block hash error, err: %v\n", err)
-	}
-	t.Logf("RecentBlockHash: %v\n", res.Blockhash)
-	t.Logf("RecentBlockHash: %x\n", res.Blockhash)
-
-	rawTx, err := types.CreateRawTransaction(types.CreateRawTransactionParam{
-		Instructions: []types.Instruction{
-			ixReceiveRequest,
-		},
-		Signers: []types.Account{
-			accAdmin,
 		},
 		FeePayer:        accAdmin.PublicKey,
 		RecentBlockHash: res.Blockhash,
