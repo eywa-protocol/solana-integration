@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"github.com/near/borsh-go"
 	"log"
 	"testing"
 
@@ -28,10 +29,9 @@ func BuildIxTestOracleRequest(
 		152, 120, 27, 0, 154, 119, 114, 10,
 	}
 
-	data, err := common.SerializeData(struct {
+	data, err := borsh.Serialize(struct {
 		Instruction    [8]uint8
 		requestId      common.PublicKey
-		selectorLen    uint32
 		selector       []uint8
 		receiveSide    [20]uint8
 		oppositeBridge [20]uint8
@@ -39,7 +39,6 @@ func BuildIxTestOracleRequest(
 	}{
 		Instruction:    InstructionTestOracleRequest,
 		requestId:      requestId,
-		selectorLen:    uint32(len(selector)),
 		selector:       selector,
 		receiveSide:    receiveSide,
 		oppositeBridge: oppositeBridge,
@@ -57,6 +56,7 @@ func BuildIxTestOracleRequest(
 		Data: data,
 	}
 }
+
 
 func Test_oracle_request(t *testing.T) {
 	resp, err := solana_client.GetVersion(context.Background())
@@ -115,7 +115,7 @@ func Test_oracle_request(t *testing.T) {
 	ixTestOracleRequest := BuildIxTestOracleRequest(
 		program.PublicKey,
 		accRequestId.PublicKey,
-		[]byte("123456"), // selector []uint8,
+		[]uint8("ababab"), // selector []uint8,
 		receiveSide,
 		oppositeBridge,
 		123, // chainId uint64,
@@ -151,3 +151,6 @@ func Test_oracle_request(t *testing.T) {
 
 	t.Log("txHash:", txSig)
 }
+
+
+
