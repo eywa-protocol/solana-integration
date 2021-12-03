@@ -104,11 +104,6 @@ export type EywaPortalSynthesis = {
           "isSigner": false
         },
         {
-          "name": "thisProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
@@ -124,15 +119,20 @@ export type EywaPortalSynthesis = {
           "isSigner": false
         },
         {
-          "name": "owner",
+          "name": "bridge",
           "isMut": false,
           "isSigner": true
         }
       ],
       "args": [
         {
-          "name": "bumpMint",
-          "type": "u8"
+          "name": "txId",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
         },
         {
           "name": "bumpRequest",
@@ -337,12 +337,12 @@ export type EywaPortalSynthesis = {
           "isSigner": false
         },
         {
-          "name": "tokenProgram",
+          "name": "owner",
           "isMut": false,
-          "isSigner": false
+          "isSigner": true
         },
         {
-          "name": "systemProgram",
+          "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
         },
@@ -352,9 +352,9 @@ export type EywaPortalSynthesis = {
           "isSigner": false
         },
         {
-          "name": "owner",
+          "name": "systemProgram",
           "isMut": false,
-          "isSigner": true
+          "isSigner": false
         }
       ],
       "args": [
@@ -616,12 +616,12 @@ export type EywaPortalSynthesis = {
           "isSigner": false
         },
         {
-          "name": "tokenProgram",
+          "name": "bridge",
           "isMut": false,
-          "isSigner": false
+          "isSigner": true
         },
         {
-          "name": "systemProgram",
+          "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
         },
@@ -631,9 +631,9 @@ export type EywaPortalSynthesis = {
           "isSigner": false
         },
         {
-          "name": "bridge",
+          "name": "systemProgram",
           "isMut": false,
-          "isSigner": true
+          "isSigner": false
         }
       ],
       "args": [
@@ -872,6 +872,15 @@ export type EywaPortalSynthesis = {
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "txId",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
           {
             "name": "bump",
             "type": "u8"
@@ -1394,11 +1403,6 @@ export const IDL: EywaPortalSynthesis = {
           "isSigner": false
         },
         {
-          "name": "thisProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
@@ -1414,15 +1418,20 @@ export const IDL: EywaPortalSynthesis = {
           "isSigner": false
         },
         {
-          "name": "owner",
+          "name": "bridge",
           "isMut": false,
           "isSigner": true
         }
       ],
       "args": [
         {
-          "name": "bumpMint",
-          "type": "u8"
+          "name": "txId",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
         },
         {
           "name": "bumpRequest",
@@ -1627,12 +1636,12 @@ export const IDL: EywaPortalSynthesis = {
           "isSigner": false
         },
         {
-          "name": "tokenProgram",
+          "name": "owner",
           "isMut": false,
-          "isSigner": false
+          "isSigner": true
         },
         {
-          "name": "systemProgram",
+          "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
         },
@@ -1642,9 +1651,9 @@ export const IDL: EywaPortalSynthesis = {
           "isSigner": false
         },
         {
-          "name": "owner",
+          "name": "systemProgram",
           "isMut": false,
-          "isSigner": true
+          "isSigner": false
         }
       ],
       "args": [
@@ -1906,12 +1915,12 @@ export const IDL: EywaPortalSynthesis = {
           "isSigner": false
         },
         {
-          "name": "tokenProgram",
+          "name": "bridge",
           "isMut": false,
-          "isSigner": false
+          "isSigner": true
         },
         {
-          "name": "systemProgram",
+          "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
         },
@@ -1921,9 +1930,9 @@ export const IDL: EywaPortalSynthesis = {
           "isSigner": false
         },
         {
-          "name": "bridge",
+          "name": "systemProgram",
           "isMut": false,
-          "isSigner": true
+          "isSigner": false
         }
       ],
       "args": [
@@ -2162,6 +2171,15 @@ export const IDL: EywaPortalSynthesis = {
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "txId",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
           {
             "name": "bump",
             "type": "u8"

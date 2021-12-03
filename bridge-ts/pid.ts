@@ -1,23 +1,11 @@
-import { Keypair } from '@solana/web3.js';
-
-import privBridge from '../target/deploy/eywa_bridge-keypair.json';
-import privFaucet from '../target/deploy/test_token_faucet-keypair.json';
-import privGastank from '../target/deploy/eywa_gas_tank-keypair.json';
-import privMain from '../target/deploy/eywa_portal_synthesis-keypair.json';
-import privStub from '../target/deploy/test_stub-keypair.json';
+import { PublicKey } from '@solana/web3.js';
 
 
-const pairBridge = Keypair.fromSecretKey(Buffer.from(privBridge));
-const pairFaucet = Keypair.fromSecretKey(Buffer.from(privFaucet));
-const pairGastank = Keypair.fromSecretKey(Buffer.from(privGastank));
-const pairMain = Keypair.fromSecretKey(Buffer.from(privMain));
-const pairStub = Keypair.fromSecretKey(Buffer.from(privStub));
-
-export const pidBridge = pairBridge.publicKey;
-export const pidFaucet = pairFaucet.publicKey;
-export const pidGastank = pairGastank.publicKey;
-export const pidMain = pairMain.publicKey;
-export const pidStub = pairStub.publicKey;
+export const pidBridge = new PublicKey('jQ72ScWZLkK3Qn6fZzdoSzLbiUKPXx8A7vvuRL64v4P');
+export const pidFaucet = new PublicKey('rhj7kZfj2amgFvSom5vRdxxcW2Ks3kUzjaNHfUFs8t3');
+export const pidGastank = new PublicKey('B6JWXfFQLcqnrHisoxMxvnGHYh3mbVtXqXZhmcwEQmf1');
+export const pidMain = new PublicKey('AuzMXaqorC99B2aiaYhgFKpxiWKZU1TtCcZ9hSo9Cgz');
+export const pidStub = new PublicKey('8bQh2NQj5XJEPtDzhBcUxZqQuYVSDys1wVhyk7znphNw');
 
 export default {
   bridge: pidBridge,

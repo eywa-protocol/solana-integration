@@ -8,17 +8,16 @@ import {
 import BridgeFactory from './';
 
 import type { AccountInfo, MintInfo, u64 } from "@solana/spl-token";
-import type { Syntesise } from './prg-syntesise';
-import type { TestTokenFaucet } from './prg-test-token-faucet';
+import type { NEywaPortalSynthesis, PrgSyntesise } from './prg-syntesise';
+import type { PrgTestTokenFaucet } from './prg-test-token-faucet';
 import type {
   IBurnRequestEvent,
-  IMintDataAccount,
   ISynthesizeRequestEvent,
 } from "../bridge-ts/interfaces";
 
 export class BridgeUserClient {
-  private main: Syntesise;
-  private faucet: TestTokenFaucet;
+  private main: PrgSyntesise;
+  private faucet: PrgTestTokenFaucet;
   private accGuest = web3.Keypair.generate();
 
   constructor(
@@ -142,10 +141,10 @@ export class BridgeUserClient {
   // NOTE: emergencyUnsyntesizeRequest synthesize method fro revert synthesize. Use in opposite synthesis
   // export const revertSynthesize = async (
 
-  public async getListRepresentation(): Promise<IMintDataAccount[]> {
+  public async getListRepresentation(): Promise<NEywaPortalSynthesis.IMintDataAccount[]> {
     const settings = await this.main.fetchSettings();
     const { syntTokens } = settings;
-    const representations: IMintDataAccount[] = [];
+    const representations: NEywaPortalSynthesis.IMintDataAccount[] = [];
     for (const pubMintData of syntTokens) {
       representations.push(
         await this.main.fetchSyntData(pubMintData),

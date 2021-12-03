@@ -6,7 +6,7 @@ import main from '../target/idl/eywa_portal_synthesis.json';
 import stub from '../target/idl/test_stub.json';
 
 import type { Idl } from '@project-serum/anchor';
-import type { Base58PublicKey } from '../bridge-ts/interfaces/types';
+import type { Base58PublicKey } from './types';
 
 type IdlMeta = { address: Base58PublicKey };
 export type IdlDeployed = Idl & { metadata?: IdlMeta };

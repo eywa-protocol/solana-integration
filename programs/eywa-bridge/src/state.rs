@@ -3,13 +3,6 @@ use anchor_lang::{
     solana_program::pubkey::Pubkey,
 };
 
-/*
-#[account]
-#[derive(Default)]
-pub struct BridgeNonce {
-    pub nonce: u64,
-}
-*/
 
 #[account]
 #[derive(Default)]
@@ -20,7 +13,7 @@ pub struct Settings {
 }
 impl Settings {
     pub const SEED: &'static [u8] = b"eywa-pda";
-    pub const LEN: usize = 8 + 32 + 8 + 1;
+    // pub const LEN: usize = 8 + 32 + 8 + 1;
 }
 
 #[account]
@@ -50,8 +43,6 @@ impl ContractReceiveBind {
 #[derive(
     AnchorSerialize,
     AnchorDeserialize,
-    Clone,
-    PartialEq,
 )]
 pub struct StandaloneInstruction {
     pub accounts: Vec<TransactionAccount>,
@@ -59,19 +50,15 @@ pub struct StandaloneInstruction {
     pub data: Vec<u8>,
 }
 
-
 #[derive(
     AnchorSerialize,
     AnchorDeserialize,
-    Clone,
-    PartialEq,
 )]
 pub struct TransactionAccount {
     pub pubkey: Pubkey,
     pub is_signer: bool,
     pub is_writable: bool,
 }
-
 impl From<TransactionAccount> for AccountMeta {
     fn from(account: TransactionAccount) -> AccountMeta {
         match account.is_writable {

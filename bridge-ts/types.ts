@@ -1,6 +1,8 @@
 import { web3 } from "@project-serum/anchor";
 import { u64 } from "@solana/spl-token";
 
+export { TransactionAccount } from "./interfaces/i-transaction-account";
+export { StandaloneInstruction } from "./interfaces/i-standalone-instruction";
 
 export type Base58PublicKey = string;
 

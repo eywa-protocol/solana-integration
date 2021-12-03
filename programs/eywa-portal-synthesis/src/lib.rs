@@ -18,8 +18,7 @@ pub mod ctxt;
 use ctxt::*;
 
 
-declare_id!("7gRLkKiavHbYX29kjPrm2jXcrFYYEKZUrNUxmBTMBDtU");
-
+std::include!("pid.in");
 
 #[program]
 pub mod eywa_portal_synthesis {
@@ -68,10 +67,13 @@ pub mod eywa_portal_synthesis {
     // can called only by bridge after initiation on a second chain
     pub fn mint_synthetic_token(
         ctx: Context<MintSyntheticToken>,
-        _bump_mint: u8,
+        // _bump_mint: u8,
+        _tx_id: [u8; 32],   // H256, // id for replay protection
         _bump_request: u8,
         amount: u64, // от 0 до 18 446 744 073 709 551 615
     ) -> ProgramResult {
+        // msg!("123");
+
         let seeds = &[
             state::Settings::SEED.as_ref(),
             &[ctx.accounts.settings.bump],
@@ -101,6 +103,7 @@ pub mod eywa_portal_synthesis {
 
         // synthesizeStates[_txID] = SynthesizeState.Synthesized;
         ctx.accounts.synthesize_state.state = crate::state::SynthesizeState::Synthesized;
+        // ctx.accounts.synthesize_state.tx_id = tx_id; // ???
 
         emit!(events::SynthesizeCompleted {
             id: ctx.accounts.synthesize_state.key(),
@@ -120,30 +123,26 @@ pub mod eywa_portal_synthesis {
         let token_real = ctx.accounts.real_token.key();
         let tx_id = ctx.accounts.synthesize_request.key();
 
-        let message = format!(
-            "EmergencyUnsyntesizeRequest: tx_id={:?}, token_real={:?}",
-            tx_id, token_real,
-        );
-        msg!("{}", message);
-
         let seeds = &[
             &crate::state::Settings::SEED[..],
             &[ctx.accounts.settings.bump],
         ];
 
-        /*
-        require(synthesizeStates[_txID]!= SynthesizeState.Synthesized, "Synt: syntatic tokens already minted");
-        synthesizeStates[_txID] = SynthesizeState.RevertRequest;// close
-        bytes memory out  = abi.encodeWithSelector(bytes4(keccak256(bytes('emergencyUnsynthesize(bytes32)'))),_txID);
-        // TODO add payment by token
-        IBridge(bridge).transmitRequestV2(out,_receiveSide, _oppositeBridge, _chainID);
-        */
+        let f = ethabi::Function {
+            name: "emergencyUnsynthesize".to_owned(),
+            inputs: vec![
+                ethabi::Param { name: "_txID".to_owned(), kind: ethabi::ParamType::FixedBytes(32), internal_type: None },
+            ],
+			outputs: vec![],
+			constant: false,
+			state_mutability: ethabi::StateMutability::default(),
+        };
+        let calldata = f.encode_input(&[ethabi::Token::FixedBytes(tx_id.to_bytes().to_vec())]).unwrap();
+
         eywa_bridge::cpi::transmit_request(
             ctx.accounts.into_transmit_request_context()
             .with_signer(&[&seeds[..]]),
-            (&[
-                crate::state::PortalBridgeMethod::EmergencyUnsynthesize as u8,
-            ]).to_vec(), // &[ 1, 2, 3 ], // &out,
+            calldata,
             ctx.accounts.synthesize_request.chain_to_address,
             ctx.accounts.synthesize_request.opposite_bridge,
             ctx.accounts.synthesize_request.chain_id,
@@ -190,43 +189,46 @@ pub mod eywa_portal_synthesis {
         ctx.accounts.tx_state.chain_id = chain_id;
         ctx.accounts.tx_state.bump = bump;
 
-        /*
-        ISyntERC20(_stoken).burn(_msgSender(), _amount);
-        txID = keccak256(abi.encodePacked(this, requestCount));
+        let f = ethabi::Function {
+            name: "unsynthesize".to_owned(),
+            inputs: vec![
+                ethabi::Param { name: "_txID".to_owned(), kind: ethabi::ParamType::FixedBytes(32), internal_type: None },
+                ethabi::Param { name: "_token".to_owned(), kind: ethabi::ParamType::Address, internal_type: None },
+                ethabi::Param { name: "_amount".to_owned(), kind: ethabi::ParamType::Uint(32), internal_type: None },
+                ethabi::Param { name: "_to".to_owned(), kind: ethabi::ParamType::Address, internal_type: None },
+            ],
+			outputs: vec![],
+			constant: false,
+			state_mutability: ethabi::StateMutability::default(),
+        };
+        let calldata = f.encode_input(&[
+            ethabi::Token::FixedBytes(tx_id.to_bytes().to_vec()),
+            ethabi::Token::Address(ethereum_types::Address::from(ctx.accounts.mint_data.token_real)),
+            ethabi::Token::Uint(ethereum_types::U256::from(amount)),
+            ethabi::Token::Address(ethereum_types::Address::from(chain_to_address)),
+        ]).unwrap();
 
-        bytes memory out  = abi.encodeWithSelector(bytes4(keccak256(bytes('unsynthesize(bytes32,address,uint256,address)'))),txID, representationReal[_stoken], _amount, _chain2address);
-        // TODO add payment by token
-        IBridge(bridge).transmitRequestV2(out, _receiveSide, _oppositeBridge, _chainID);
-        */
         eywa_bridge::cpi::transmit_request(
             ctx.accounts.into_transmit_request_context()
             .with_signer(&[&seeds[..]]),
-            (&[
-                crate::state::PortalBridgeMethod::Unsynthesize as u8,
-            ]).to_vec(), // &[ 1, 2, 3 ], // &out,
+            calldata,
             ctx.accounts.tx_state.chain_to_address,
             ctx.accounts.tx_state.opposite_bridge,
             ctx.accounts.tx_state.chain_id,
         )?;
 
-        // requestCount += 1;
         ctx.accounts.settings.synthesis_request_count += 1;
 
-
-        // emit BurnRequest(txID, _msgSender(), _chain2address, _amount, _stoken);
         emit!(events::BurnRequest {
             id: tx_id,
-            from: ctx.accounts.client.key(), // _msgSender(),
+            from: ctx.accounts.client.key(),
             to: chain_to_address,
             amount,
             token: ctx.accounts.tx_state.synt_token.key(),
-            // token: ctx.accounts.mint_data.token_real,
         });
 
         Ok(())
     }
-
-    // burnSyntheticTokenWithPermit
 
     // emergencyUnburn onlyBridge
     // can called only by bridge after initiation on a second chain
@@ -397,57 +399,44 @@ pub mod eywa_portal_synthesis {
             &crate::state::Settings::SEED[..],
             &[ctx.accounts.settings.bump],
         ];
-        /*
-        // Залочить SPLки
-        TransferHelper.safeTransferFrom(_token, _msgSender(), address(this), _amount);
-        // Запомнить состояние
-        balanceOf[_token] = balanceOf[_token].add(_amount);
-        */
+
         token::transfer(
             ctx.accounts.into_transfer_context()
             .with_signer(&[&seeds[..]]),
             amount,
         )?;
-        /*
-        // посчитать внутренний идентификатор
-        txID = keccak256(abi.encodePacked(this, requestCount));
-        */
+
         let tx_id = ctx.accounts.tx_state.key();
-        // let tx_id = ctx.accounts.settings.key();
-        /*
-        // сгенерировать вызов
-        bytes memory out  = abi.encodeWithSelector(bytes4(
-            keccak256(bytes('mintSyntheticToken(bytes32,address,uint256,address)'))
-        ), txID, _token, _amount, _chain2address);
-        // и передать наружу бэкенду
-        IBridge(bridge).transmitRequestV2(out,_receiveSide, _oppositeBridge, _chainID);
-        //  transmitRequestV2(
-                bytes memory _selector,
-                address receiveSide,
-                address oppositeBridge,
-                uint chainId
-            ) onlyTrustedDex
-        */
+
+        let f = ethabi::Function {
+            name: "mintSyntheticToken".to_owned(),
+            inputs: vec![
+                ethabi::Param { name: "_txID".to_owned(), kind: ethabi::ParamType::FixedBytes(32), internal_type: None },
+                ethabi::Param { name: "_tokenReal".to_owned(), kind: ethabi::ParamType::Address, internal_type: None },
+                ethabi::Param { name: "_amount".to_owned(), kind: ethabi::ParamType::Uint(32), internal_type: None },
+                ethabi::Param { name: "_to".to_owned(), kind: ethabi::ParamType::Address, internal_type: None },
+            ],
+			outputs: vec![],
+			constant: false,
+			state_mutability: ethabi::StateMutability::default(),
+        };
+
+        let calldata = f.encode_input(&[
+            ethabi::Token::FixedBytes(tx_id.to_bytes().to_vec()),
+            ethabi::Token::Address(ethereum_types::Address::from(chain_to_address)),
+            ethabi::Token::Uint(ethereum_types::U256::from(amount)),
+            ethabi::Token::Address(ethereum_types::Address::from(receive_side)),
+        ]).unwrap();
+
         eywa_bridge::cpi::transmit_request(
             ctx.accounts.into_transmit_request_context()
             .with_signer(&[&seeds[..]]),
-            (&[
-                crate::state::SynthesisBridgeMethod::MintSyntheticToken as u8,
-            ]).to_vec(), // &[ 1, 2, 3 ], // &out,
+            calldata,
             receive_side,
             opposite_bridge,
             chain_id,
         )?;
-        /*
-        TxState storage txState = requests[txID];
-        txState.recipient    = _msgSender();
-        txState.chain2address    = _chain2address;
-        txState.rtoken     = _token;
-        txState.amount     = _amount;
-        txState.state = RequestState.Sent;
-        */
-        // let synthesize_request = &mut ctx.accounts.synthesize_request;
-        // synthesize_request.tx_id = tx_id;
+
         ctx.accounts.tx_state.bump = bump_seed_synthesize_request;
         ctx.accounts.tx_state.recipient = ctx.accounts.source.key();
         ctx.accounts.tx_state.chain_to_address = chain_to_address;
@@ -457,10 +446,8 @@ pub mod eywa_portal_synthesis {
         ctx.accounts.tx_state.amount = amount;
         ctx.accounts.tx_state.state = crate::state::RequestState::Sent;
 
-        // requestCount +=1;
         ctx.accounts.settings.portal_request_count += 1;
 
-        // emit events::SynthesizeRequest(txID, _msgSender(), _chain2address, _amount, _token);
         emit!(events::SynthesizeRequest {
             id: tx_id,
             from: ctx.accounts.source.key(),
@@ -471,8 +458,6 @@ pub mod eywa_portal_synthesis {
 
         Ok(())
     }
-
-    // synthesizeWithPermit – позже подумаем
 
     /*
         can called only by bridge after initiation on a second chain
@@ -608,8 +593,6 @@ pub mod eywa_portal_synthesis {
         )?;
 
         ctx.accounts.unsynthesize_state.state = crate::state::UnsynthesizeState::Unsynthesized;
-        // ctx.accounts.unsynthesize_state
-        //     .serialize(&mut *ctx.accounts.unsynthesize_state.try_borrow_mut_data()?)?;
 
         let event = events::BurnCompleted {
             id: tx_id,
@@ -666,35 +649,17 @@ pub mod eywa_portal_synthesis {
         }
         */
         ctx.accounts.unsynthesize_state.state = crate::state::UnsynthesizeState::RevertRequest;
-        // unsynthesize_states_info
-        //     .serialize(&mut *ctx.accounts.unsynthesize_state.try_borrow_mut_data()?)?;
 
-        /*
-        let mut hasher = keccak::Hasher::default();
-        hasher.hash(b"emergencyUnburn(bytes32)");
-        let title = hasher.result().0;
-
-        let mut hasher = keccak::Hasher::default();
-        hasher.hash(
-            <([u8; 32], &str) as borsh::BorshSerialize>::try_to_vec(&(title, tx_id.as_str()))
-                .map_err(|_| ProgramError::InvalidArgument)?
-                .as_slice(),
-        );
-
-        let out = hasher.result().0;
-
-        let mut bridge_nonce: BridgeNonce = get_or_create_account_data(
-            &ctx.accounts.bridge_nonce,
-            &ctx.accounts.nonce_master_account,
-            &ctx.accounts.system_program,
-            &ctx.accounts.rent,
-            8,
-            //TODO: Take seed from params
-            "0,1,2,3,4,5,6,7,8",
-            &[],
-            ctx.program_id,
-        )?;
-        */
+        let f = ethabi::Function {
+            name: "emergencyUnburn".to_owned(),
+            inputs: vec![
+                ethabi::Param { name: "_txID".to_owned(), kind: ethabi::ParamType::FixedBytes(32), internal_type: None },
+            ],
+			outputs: vec![],
+			constant: false,
+			state_mutability: ethabi::StateMutability::default(),
+        };
+        let calldata = f.encode_input(&[ethabi::Token::FixedBytes(tx_id.to_bytes().to_vec())]).unwrap();
 
         let seeds = &[
             &crate::state::Settings::SEED[..],
@@ -704,9 +669,7 @@ pub mod eywa_portal_synthesis {
         eywa_bridge::cpi::transmit_request(
             ctx.accounts.into_transmit_request_context()
             .with_signer(&[&seeds[..]]),
-            (&[
-                crate::state::SynthesisBridgeMethod::EmergencyUnburn as u8,
-            ]).to_vec(), // &[ 1, 2, 3 ], // &out,
+            calldata,
             receive_side,
             opposite_bridge,
             chain_id,
@@ -726,10 +689,6 @@ pub mod eywa_portal_synthesis {
 
 #[error]
 pub enum ErrorCode {
-    /*
-    #[msg("This is an error message clients will automatically display 1234")]
-    Test = 1234,
-    */
     #[msg("Unknown Error")]
     UnknownError = 2000,
     #[msg("OnlyBridge access constraint")]
@@ -742,16 +701,4 @@ pub enum ErrorCode {
     UnknownSynthesisError = 4000,
     #[msg("Synt: state not open or tx does not exist")]
     StateNotOpen,
-    /*
-    #[msg("Unauthorized")]
-    Unauthorized = 2000,
-    #[msg("UNTRUSTED DEX")]
-    UntrustedDex,
-    #[msg("index out of bounds")]
-    IndexOutOfBounds,
-    #[msg("value out of bounds")]
-    ValueOutOfBounds,
-    #[msg("invalid value")]
-    InvalidValue,
-    */
 }

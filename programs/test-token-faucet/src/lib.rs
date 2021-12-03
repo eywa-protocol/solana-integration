@@ -9,8 +9,7 @@ pub mod ctxt;
 use ctxt::*;
 
 
-declare_id!("5Rup5ySbtRPZr9aJb2PW9UMFhMvBwxKAQcXGyQRoYEXJ");
-
+std::include!("pid.in");
 
 #[program]
 pub mod test_token_faucet {

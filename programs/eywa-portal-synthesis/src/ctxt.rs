@@ -13,8 +13,7 @@ pub struct Initialize<'info> {
         payer = owner,
         seeds = [ state::Settings::SEED.as_ref() ],
         bump = bump_seed,
-        // space = 8 + 8 + 32 * 50 + 8 + 32 * 250 + 77,
-        space = 10000,
+        space = state::Settings::LEN,
     )]
     pub settings: Account<'info, state::Settings>,
     #[account(mut)]
@@ -27,7 +26,7 @@ pub struct Initialize<'info> {
 pub struct SetBridge<'info> {
     #[account(
         mut,
-        // constraint = &settings.owner == owner.key,
+        constraint = &settings.owner == owner.key,
         seeds = [ state::Settings::SEED.as_ref() ],
         bump = settings.bump
     )]
@@ -35,14 +34,13 @@ pub struct SetBridge<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
     pub bridge: AccountInfo<'info>,
-    // pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct SetOwner<'info> {
     #[account(
         mut,
-        // constraint = &settings.owner == owner.key,
+        constraint = &settings.owner == owner.key,
         seeds = [ state::Settings::SEED.as_ref() ],
         bump = settings.bump
     )]
@@ -50,7 +48,6 @@ pub struct SetOwner<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
     pub new_owner: AccountInfo<'info>,
-    // pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -63,7 +60,7 @@ pub struct SetOwner<'info> {
 pub struct CreateRepresentation<'info> {
     #[account(
         mut,
-        // constraint = &settings.owner == owner.key,
+        constraint = &settings.owner == owner.key,
     )]
     pub settings: Account<'info, state::Settings>,
     #[account(
@@ -85,21 +82,20 @@ pub struct CreateRepresentation<'info> {
             token_real.as_ref()
         ],
         bump = bump_seed_data,
+        space = state::MintData::LEN,
         payer = owner,
-        space = 10000,
     )]
     pub mint_data: Account<'info, state::MintData>,
-    pub token_program: AccountInfo<'info>,
-    pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
-    // pub pda_signer: AccountInfo<'info>,
     pub owner: Signer<'info>,
+    pub token_program: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 #[instruction(
-    bump_mint: u8,
-    bump_request: u8,
+    tx_id: [u8; 32],
+    bump_synthesize_state: u8,
 )]
 pub struct MintSyntheticToken<'info> {
     pub settings: Account<'info, state::Settings>,
@@ -117,19 +113,18 @@ pub struct MintSyntheticToken<'info> {
         init,
         seeds = [
             state::SynthesizeStateData::SEED.as_ref(),
-            mint_data.token_real.as_ref()
+            tx_id.as_ref()
         ],
-        bump = bump_request,
-        payer = owner
+        bump = bump_synthesize_state,
+        payer = bridge
     )]
     pub synthesize_state: ProgramAccount<'info, state::SynthesizeStateData>,
     #[account(mut)]
     pub to: Account<'info, anchor_spl::token::TokenAccount>,
-    pub this_program: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
-    pub owner: Signer<'info>,
+    pub bridge: Signer<'info>,
 }
 impl<'info> MintSyntheticToken<'info> {
     pub fn into_mint_to_context(
@@ -184,7 +179,6 @@ impl<'info> EmergencyUnsyntesizeRequest<'info> {
 #[derive(Accounts)]
 #[instruction(
     bump: u8,
-    // token_real: [u8; 20],
 )]
 pub struct BurnSyntheticToken<'info> {
     pub settings: Account<'info, state::Settings>,
@@ -322,12 +316,11 @@ pub struct Synthesize<'info> {
     #[account(
         init,
         seeds = [
-            // state::SynthesizeStateData::SEED.as_ref(),
             state::TxState::SEED.as_ref(),
             real_token.key().as_ref()
         ],
         bump = bump_seed_synthesize_request,
-        space = 10000,
+        // space = 10000,
         payer = client
     )]
     pub tx_state: ProgramAccount<'info, state::TxState>,
@@ -382,7 +375,6 @@ impl<'info> Synthesize<'info> {
     bump_seed_synthesize_request: u8,
 )]
 pub struct EmergencyUnsynthesize<'info> {
-    // #[account(mut)]
     pub settings: Account<'info, state::Settings>,
     #[account(
         mut,
@@ -421,24 +413,19 @@ impl<'info> EmergencyUnsynthesize<'info> {
 
 #[derive(Accounts)]
 pub struct Unsynthesize<'info> {
-    // #[account(mut)]
     pub settings: Account<'info, state::Settings>,
     pub real_token: Account<'info, anchor_spl::token::Mint>,
     #[account(mut)]
     pub unsynthesize_state: Account<'info, state::UnsynthesizeStateData>,
-    // #[account(mut, signer)]
-    // pub states_master_account: AccountInfo<'info>,
     #[account(mut)]
     pub source: AccountInfo<'info>,
     #[account(mut)]
     pub destination: AccountInfo<'info>,
-    // #[account(signer, mut)]
-    // pub owner_account: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
-    pub system_program: AccountInfo<'info>,
-    pub rent: Sysvar<'info, Rent>,
     #[account(signer)]
     pub bridge: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
 }
 impl<'info> Unsynthesize<'info> {
     pub fn into_transfer_context(
@@ -457,11 +444,9 @@ impl<'info> Unsynthesize<'info> {
 
 #[derive(Accounts)]
 pub struct EmergencyUnburnRequest<'info> {
-    // #[account(mut)]
     pub settings: Account<'info, state::Settings>,
     #[account(mut)]
     pub unsynthesize_state: Account<'info, state::UnsynthesizeStateData>,
-    //unsynthesize_state: ProgramAccount<'info, UnsynthesizeStateData>,
     #[account(mut, signer)]
     pub states_master_account: AccountInfo<'info>,
     #[account(signer, mut)]
@@ -470,7 +455,6 @@ pub struct EmergencyUnburnRequest<'info> {
     pub bridge_nonce: AccountInfo<'info>,
     #[account(signer)]
     pub message_sender: AccountInfo<'info>,
-    // pub pda_master: AccountInfo<'info>,
     #[account(mut)]
     pub bridge_settings: Account<'info, eywa_bridge::state::Settings>,
     pub bridge_program: Program<'info, eywa_bridge::program::EywaBridge>,
@@ -484,7 +468,6 @@ impl<'info> EmergencyUnburnRequest<'info> {
         CpiContext::new(
             self.bridge_program.to_account_info(),
             eywa_bridge::cpi::accounts::TransmitRequest {
-                // signer: self.pda_master.clone(),
                 signer: self.settings.to_account_info(),
                 settings: self.bridge_settings.to_account_info(),
                 system_program: self.system_program.to_account_info(),

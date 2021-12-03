@@ -2,13 +2,13 @@ import { Idl, Program, Provider, web3 } from "@project-serum/anchor";
 
 import StubWallet from "./stub-wallet";
 
-export abstract class Base {
-  protected program: Program;
+export abstract class PrgBase<T extends Idl> {
+  protected program: Program<T>;
 
   constructor(
     protected connection: web3.Connection,
     programId: web3.PublicKey,
-    idl: Idl
+    idl: T, // Idl
     // provider: Provider,
   ) {
     const pidBridge = new web3.PublicKey(programId);
@@ -17,7 +17,7 @@ export abstract class Base {
       StubWallet.instance,
       Provider.defaultOptions()
     );
-    this.program = new Program(idl, pidBridge, provider);
+    this.program = new Program<T>(idl, pidBridge, provider);
     // this.logger.logPublicKey('pidBridge', pidBridge);
   }
 
