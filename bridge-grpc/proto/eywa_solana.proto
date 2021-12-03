@@ -1,0 +1,151 @@
+syntax = "proto3";
+
+// import "google/protobuf/any.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "gitlab.digiu.ai/blockchainlaboratory/eywa-solana-test/eywa-solana-grpc/bridge-grpc/proto;proto";
+
+package eywa_solana_grpc;
+
+service Bridge {
+  rpc subscribeOracleRequest(google.protobuf.Empty) returns (stream OracleRequest) {}
+  rpc testOracleRequest(OracleRequest) returns (google.protobuf.Empty) {}
+  rpc testMintTestToken(TestMintTestTokenParams) returns (TestMintTestTokenResponse) {}
+  // предполагается, упаковка следующих двух инструкций в одну транзакцию
+  rpc testIxTokenApprove(TestIxTokenApproveRequest) returns (Instruction) {}
+  rpc testIxPortalSynthesize(TestIxPortalSynthesizeRequest) returns (Instruction) {}
+
+  rpc subscribeSlotChange(google.protobuf.Empty) returns (stream SlotInfo) {}
+}
+
+message uinteger256 {
+  bytes value = 1;
+}
+
+message uinteger160 {
+  bytes value = 1;
+}
+
+message Instruction {
+  uinteger256 program_id = 1;
+  repeated uinteger256 accounts = 2;
+  bytes data = 3;
+}
+
+// #region Bridge events
+
+message OracleRequest{
+  string request_type = 1;
+  uinteger256 bridge = 2;
+  uinteger256 request_id = 3;
+  bytes selector = 4;
+  uinteger160 receive_side = 5;
+  uinteger160 opposite_bridge = 6;
+  fixed64 chain_id = 7;
+}
+
+message ReceiveRequest {
+  uinteger256 req_id = 1;
+  uinteger256 receive_side = 2;
+  uinteger256 tx_id = 3;
+}
+
+// #endregion Bridge events
+// #region Synthesis events
+
+message BurnRequest{
+  uinteger256 id = 1;
+  uinteger256 from = 2;
+  uinteger256 to = 3;
+  fixed64 amount = 4;
+  uinteger160 token = 5;
+}
+
+message SynthesizeCompleted {
+  uinteger256 id = 1;
+  uinteger256 to = 2;
+  fixed64 amount = 3;
+  uinteger160 token = 4;
+}
+
+message RevertBurnCompleted {
+  uinteger256 id = 1;
+  uinteger256 to = 2;
+  fixed64 amount = 3;
+  uinteger160 token = 4;
+}
+
+message RevertBurnRequest {
+  string id = 1;
+  uinteger256 to = 2;
+}
+
+message RevertSynthesizeRequest{
+  uinteger256 id = 1;
+  uinteger256 to = 2;
+}
+
+// #endregion Synthesis events
+// #region Portal events
+
+message SynthesizeRequest {
+  uinteger256 id = 1;
+  uinteger256 from = 2;
+  uinteger160 to = 3;
+  fixed64 amount = 4;
+  uinteger256 real_token = 5;
+}
+
+message BurnCompleted {
+  string id = 1;
+  uinteger256 to = 2;
+  fixed64 amount = 3;
+  uinteger256 token = 4;
+}
+
+message RevertSynthesizeCompleted {
+  uinteger256 id = 1;
+  uinteger256 to = 2;
+  fixed64 amount = 3;
+  uinteger256 token = 4;
+}
+
+// #endregion Portal events
+
+// other messages
+
+message SlotInfo {
+  fixed64 slot = 1;   // Currently processing slot
+  fixed64 parent = 2; // Parent of the current slot
+  fixed64 root = 3;   // The root block of the current slot's fork
+}
+
+message TestMintTestTokenRequest {
+  uinteger256 pub_token = 1;
+  uinteger256 pub_user = 2;
+  fixed64 amount = 3;
+}
+
+message TestMintTestTokenResponse {
+  // адрес кошелька pub_user для хранения pub_token
+  // создаётся, если не был проинициализирован ранее
+  // в нём должно появиться amount токенов
+  uinteger256 pub_associated_token_account = 1;
+}
+
+message TestIxTokenApproveRequest {
+  uinteger256 pub_token = 1; // что
+  uinteger256 pub_user = 2; // кто из кошелька pub_token.associated(pub_user)
+  uinteger256 pub_delegate = 2; // кому в кошелёк pub_token.associated(pubDelegate)
+  fixed64 amount = 3; // сколько
+}
+
+message TestIxPortalSynthesizeRequest {
+  uinteger160 chainToAddress = 1;
+  uinteger160 receiveSide = 2;
+  uinteger160 oppositeBridge = 3;
+  uint64 chain_id = 4;
+  uinteger256 pub_token = 5;
+  uinteger256 pub_user = 6; // signer
+  fixed64 amount = 7;
+}

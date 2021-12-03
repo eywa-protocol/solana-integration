@@ -1,0 +1,72 @@
+services:
+  - docker:bind
+
+stages:
+  - build
+  - test
+  - deploy
+  - remove
+
+### Build ###
+build:app:
+  stage: build
+  script:
+    - kraken build
+  only:
+    - branches
+  except:
+    - master
+  tags:
+    - docker
+  environment:
+    name: Development
+    url: ${CI_COMMIT_REF_SLUG}.dev.eywa.fi
+
+### Test ###
+test:dev:
+  stage: test
+  script:
+    - kraken deploy -SV
+  only:
+    - branches
+  except:
+    - master
+  tags:
+    - k8s
+  environment:
+    name: Development
+    url: ${CI_COMMIT_REF_SLUG}.dev.eywa.fi
+
+### Deploy ###
+
+deploy:dev:
+  stage: deploy
+  before_script:
+    - kraken check-registry-images
+  when: manual
+  script:
+    - kraken deploy
+  only:
+    - branches
+  except:
+    - master
+  tags:
+    - k8s
+  environment:
+    name: Development
+    url: ${CI_COMMIT_REF_SLUG}.dev.eywa.fi
+
+### Remove ###
+remove:dev:
+  stage: remove
+  script:
+    - kubectl delete ns ${CI_PROJECT_NAME}-${CI_COMMIT_REF_SLUG}
+  when: manual
+  only:
+    - branches
+  except:
+    - master
+  tags:
+    - k8s
+  environment:
+    name: Development

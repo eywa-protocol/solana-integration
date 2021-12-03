@@ -1,0 +1,7 @@
+.dockerignore
+**/.DS_Store
+node_modules
+yarn.lock
+package-lock.json
+test-client.ts
+proto/*.js

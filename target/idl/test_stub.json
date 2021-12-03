@@ -1,0 +1,41 @@
+{
+  "version": "0.0.0",
+  "name": "test_stub",
+  "instructions": [
+    {
+      "name": "hello",
+      "accounts": [
+        {
+          "name": "person",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "helloSigned",
+      "accounts": [
+        {
+          "name": "person",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "address": "DMzorxwVcxZR8gat6YiSKs87nC3Ew1MLupcsJDRpv8Ce"
+  }
+}
