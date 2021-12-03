@@ -25,7 +25,14 @@ make admin-airdrop-local
 
 #### 4 start listen to solana events
 ```
+go test -v ./test -run TestLogSubscribe
 
+```
+
+#### 5 emit event on solana side
+
+```
+go test -v ./test -run Test_oracle_request
 
 ```
 
