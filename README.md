@@ -32,9 +32,20 @@ go test -v ./test -run TestLogSubscribe
 #### 5 emit event on solana side
 
 ```
-go test -v ./test -run Test_oracle_request
+go test -v ./test -run Test_oracle_request count=1
 
 ```
+
+#### 6 go to relayer repo and run ethereum simulated contract backend to call Ethereum contract with received from solana calldata:
+
+```
+
+git clone -b solana --single-branch git@gitlab.digiu.ai:blockchainlaboratory/eywa-p2p-bridge.git
+cd eywa-p2p-bridge
+go test -v ./test/sim -run TestCallBridgeOnSolanaEvent
+
+```
+After running 6 , run 5 to emit new solana program event
 
 
 

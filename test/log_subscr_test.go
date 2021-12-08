@@ -16,17 +16,15 @@ import (
 
 type OracleRequest struct {
 	RequestType    string
-	BridgePubKey      commonSolana.PublicKey
-	RequestId       commonSolana.PublicKey
-	Selector		[]uint8
+	BridgePubKey   commonSolana.PublicKey
+	RequestId      commonSolana.PublicKey
+	Selector       []uint8
 	ReceiveSide    [20]uint8
 	OppositeBridge [20]uint8
 	ChainId        uint64
 }
-var OracleRequestEvent OracleRequest
 
-func ByteSlice(b []byte) []byte { return b }
-
+var event OracleRequest
 
 func TestLogSubscribe(t *testing.T) {
 	client, err := ws.Connect(context.Background(), rpc.LocalNet_WS)
@@ -66,26 +64,20 @@ func TestLogSubscribe(t *testing.T) {
 						if err != nil {
 							t.Fatalf("Some error occured during base64 decode. Error %s", err.Error())
 						}
-						discriminator := originalStringBytes[8:len(originalStringBytes)]
-						t.Log("перед десериализацией", common.Bytes2Hex(discriminator))
-						err = borsh.Deserialize(&OracleRequestEvent, discriminator)
+						discriminator := originalStringBytes[8:]
+						t.Log("перед десериализацией discriminator:", common.Bytes2Hex(discriminator))
+						err = borsh.Deserialize(&event, discriminator)
 						require.NoError(t, err)
-						t.Log("BridgePubKey", common.Bytes2Hex(OracleRequestEvent.BridgePubKey[:]))
-						t.Log("ChainId",OracleRequestEvent.ChainId)
+						t.Log("BridgePubKey", common.Bytes2Hex(event.OppositeBridge[:]))
+						t.Log("ChainId", event.ChainId)
 						t.Log(
 							"OppositeBridge",
-							common.BytesToAddress(OracleRequestEvent.OppositeBridge[:]),
+							common.BytesToAddress(event.OppositeBridge[:]),
 						)
-						t.Log("ReceiveSide", common.BytesToAddress(OracleRequestEvent.ReceiveSide[:]))
-						t.Log("RequestType", OracleRequestEvent.RequestType)
-						t.Log("Selector", string(OracleRequestEvent.Selector))
+						t.Log("ReceiveSide", common.BytesToAddress(event.ReceiveSide[:]))
+						t.Log("RequestType", event.RequestType)
+						t.Log("Selector", string(event.Selector))
 
-
-						//d, err := base64.NewDecoder(prg_log)
-						//require.NoError(t, err)
-						//t.Log(d)
-						//t.Log(string(d))
-						//err = solana.Base58.UnmarshalJSON([]byte(prg_log[:]))
 					}
 				}
 
@@ -94,5 +86,3 @@ func TestLogSubscribe(t *testing.T) {
 	}
 
 }
-
-
