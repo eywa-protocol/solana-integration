@@ -1,9 +1,9 @@
 // export { StandaloneInstruction, TransactionAccount } from './prg-bridge';
 
-import { Bridge } from './prg-bridge';
-import { Syntesise } from './prg-syntesise';
-import { TestStub } from './prg-test-stub';
-import { TestTokenFaucet } from './prg-test-token-faucet';
+import { IdlBridge, PrgBridge } from './prg-bridge';
+import { IdlSyntesise, PrgSyntesise } from './prg-syntesise';
+import { IdlTestStub, PrgTestStub } from './prg-test-stub';
+import { IdlTestTokenFaucet, PrgTestTokenFaucet } from './prg-test-token-faucet';
 
 import { web3 } from '@project-serum/anchor';
 export { web3 } from '@project-serum/anchor';
@@ -43,11 +43,15 @@ class Factory {
     return pid.bridge;
   }
 
-  protected _bridge: Bridge;
-  public get bridge(): Bridge {
+  protected _bridge: PrgBridge;
+  public get bridge(): PrgBridge {
     if ( !this._bridge ) {
       checkPid(idl.bridge, pid.bridge);
-      this._bridge = new Bridge(this.connection, pid.bridge, idl.bridge);
+      this._bridge = new PrgBridge(
+        this.connection,
+        pid.bridge,
+        idl.bridge as IdlBridge,
+      );
     }
 
     return this._bridge;
@@ -57,14 +61,14 @@ class Factory {
     return pid.main;
   }
 
-  protected _main: Syntesise;
-  public get main(): Syntesise {
+  protected _main: PrgSyntesise;
+  public get main(): PrgSyntesise {
     if ( !this._main ) {
       checkPid(idl.main, pid.main);
-      this._main = new Syntesise(
+      this._main = new PrgSyntesise(
         this.connection,
         pid.main,
-        idl.main,
+        idl.main as IdlSyntesise,
         this.bridge,
       );
     }
@@ -76,11 +80,15 @@ class Factory {
     return pid.stub;
   }
 
-  protected _stub: TestStub;
-  public get stub(): TestStub {
+  protected _stub: PrgTestStub;
+  public get stub(): PrgTestStub {
     if ( !this._stub ) {
       checkPid(idl.stub, pid.stub);
-      this._stub = new TestStub(this.connection, pid.stub, idl.stub);
+      this._stub = new PrgTestStub(
+        this.connection,
+        pid.stub,
+        idl.stub as IdlTestStub,
+      );
     }
 
     return this._stub;
@@ -90,11 +98,15 @@ class Factory {
     return pid.faucet;
   }
 
-  protected _faucet: TestTokenFaucet;
-  public get faucet(): TestTokenFaucet {
+  protected _faucet: PrgTestTokenFaucet;
+  public get faucet(): PrgTestTokenFaucet {
     if ( !this._faucet ) {
       checkPid(idl.faucet, pid.faucet);
-      this._faucet = new TestTokenFaucet(this.connection, pid.faucet, idl.faucet);
+      this._faucet = new PrgTestTokenFaucet(
+        this.connection,
+        pid.faucet,
+        idl.faucet as IdlTestTokenFaucet,
+      );
     }
 
     return this._faucet;

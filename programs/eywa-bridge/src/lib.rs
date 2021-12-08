@@ -3,9 +3,7 @@ use anchor_lang::{
     solana_program::{
         declare_id,
         instruction::Instruction,
-        // keccak,
         program::{
-            // invoke,
             invoke_signed,
         },
         pubkey::Pubkey,
@@ -19,7 +17,18 @@ pub mod ctxt;
 use state::*;
 use ctxt::*;
 
-declare_id!("DXUDgvk4YH47J2HzRDKAsp5zcrvWDXqsCbD3HTghpyCo");
+std::include!("pid.in");
+
+/*
+pub fn get_hex_rep(byte_array: &[u8]) -> String {
+    let build_string_vec: Vec<String> = byte_array
+        .iter()
+        .map(|d| { format!("{:02x}", &d) })
+        .collect();
+
+    build_string_vec.join("")
+}
+*/
 
 #[program]
 pub mod eywa_bridge {
@@ -36,27 +45,6 @@ pub mod eywa_bridge {
         Ok(())
     }
 
-    /*
-        function receiveRequestV2(
-            bytes32 reqId,
-            bytes memory b,
-            address receiveSide,
-            address bridgeFrom
-        ) external onlyTrustedNode {
-
-            // TODO check and repair this function
-            // bytes32 recreateReqId = keccak256(abi.encodePacked(bridgeFrom, nonce[bridgeFrom], b, receiveSide, this, block.chainId));
-            // require(reqId == recreateReqId, 'CONSISTENCY FAILED');
-            require(dexBind[receiveSide] == true, 'UNTRUSTED DEX');
-
-            (bool success, bytes memory data) = receiveSide.call(b);
-            require(success && (data.length == 0 || abi.decode(data, (bool))), 'FAILED');
-
-            nonce[bridgeFrom] = nonce[bridgeFrom] + 1;
-
-            emit ReceiveRequest(reqId, receiveSide, reqId);
-        }
-    */
     pub fn receive_request(
         ctx: Context<ReceiveRequest>,
         bridge_from: [u8; 20],
@@ -126,6 +114,7 @@ pub mod eywa_bridge {
         opposite_bridge: [u8; 20],
         chain_id: u64,
     ) -> ProgramResult {
+
         if !is_trusted_contract(
             receive_side,
             opposite_bridge,
@@ -136,12 +125,7 @@ pub mod eywa_bridge {
         }
 
         /*
-        let request_id = prepare_rq_id(
-            &selector,
-            opposite_bridge.clone(),
-            chain_id,
-            receive_side.clone(),
-        );
+        msg!("{}", get_hex_rep(&selector[..]));
         */
         let request_id = *ctx.accounts.settings.to_account_info().key;
 
@@ -184,25 +168,6 @@ pub mod eywa_bridge {
         Ok(())
     }
 
-    /**
-        Mandatory for participants who wants to use a own contracts
-        1. Contract A (chain A) should be bind with Contract B (chain B) only once!
-        It's not allowed to  switch Contract A (chain A) to Contract C (chain B).
-        This mandatory for prevent malicious behaviour.
-        2. Contract A (chain A) could be bind with several contracts where every contract from another chain.
-        For ex: Contract A (chain A) --> Contract B (chain B) + Contract A (chain A) --> Contract B' (chain B') ... etc
-
-        function addContractBind(address from, address oppositeBridge, address to) external {
-            require(to   != address(0), "NULL ADDRESS TO");
-            require(from != address(0), "NULL ADDRESS FROM");
-            require(is_in[to] == false, "TO ALREADY EXIST");
-            // for prevent malicious behaviour like switching between older and newer contracts
-            require(contractBind[from][oppositeBridge] == address(0), "UPDATE DOES NOT ALLOWED");
-            contractBind[from][oppositeBridge] = to;
-            is_in[to] = true;
-
-        }
-    */
 
     pub fn add_contract_send_bind(
         ctx: Context<AddContractSendBind>,
@@ -230,12 +195,6 @@ pub mod eywa_bridge {
     }
 }
 
-/*
-    contractBind[msg.sender][oppositeBridge] == receiveSide
-
-    contractBind[from][oppositeBridge] = to;
-    is_in[to] = true;
-*/
 fn is_trusted_contract(
     receive_side: [u8; 20],
     opposite_bridge: [u8; 20],
@@ -258,45 +217,11 @@ fn is_trusted_contract(
     true
 }
 
-/*
-pub fn prepare_rq_id(
-    selector: &Vec<u8>,
-    opposite_bridge: String,//[u8; 20],
-    chain_id: u64,
-    receive_side: String,//[u8; 20],
-) -> [u8;32] {
-    let mut hasher = keccak::Hasher::default();
-    hasher.hash(
-        <(&Vec<u8>, String, u64, String) as borsh::BorshSerialize>::try_to_vec(&(selector, opposite_bridge, chain_id, receive_side))
-            .unwrap()
-            .as_slice(),
-    );
-    hasher.result().0
-}
-*/
 
 #[error]
 pub enum ErrorCode {
-    /*
-    #[msg("This is an error message clients will automatically display 1234")]
-    Test = 1234,
-    */
     #[msg("Unknown Bridge Error")]
     UnknownBridgeError = 5000,
-    /*
-    #[msg("Unauthorized")]
-    Unauthorized = 2000,
-    #[msg("UNTRUSTED DEX")]
-    UntrustedDex,
-    */
     #[msg("UNTRUSTED CONTRACT")]
     UntrustedContract,
-    /*
-    #[msg("index out of bounds")]
-    IndexOutOfBounds,
-    #[msg("value out of bounds")]
-    ValueOutOfBounds,
-    #[msg("invalid value")]
-    InvalidValue,
-    */
 }

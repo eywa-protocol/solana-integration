@@ -1,33 +1,33 @@
-// import {
-//   PublicKey,
-//   TransactionInstruction,
-// } from "@solana/web3.js";
-import { Idl, Program, Provider, web3 } from "@project-serum/anchor";
+import { web3 } from "@project-serum/anchor";
 
-import StubWallet from "./stub-wallet";
+import { PrgBase } from "./prg-base";
+import { TestStub } from '../target/types/test_stub';
 
-import { Base } from "./prg-base";
 
-export class TestStub extends Base {
+export type IdlTestStub = TestStub;
+
+export class PrgTestStub extends PrgBase<IdlTestStub> {
   public async hello(
     name: string,
     person: web3.PublicKey
   ): Promise<web3.TransactionInstruction> {
-    return this.program.instruction.hello(name, {
-      accounts: {
+    return this.program.instruction.hello(
+      name,
+      { accounts: {
         person,
-      },
-    });
+      }},
+    );
   }
 
   public async helloSigned(
     name: string,
     person: web3.PublicKey
   ): Promise<web3.TransactionInstruction> {
-    return this.program.instruction.helloSigned(name, {
-      accounts: {
+    return this.program.instruction.helloSigned(
+      name,
+      { accounts: {
         person,
-      },
-    });
+      }},
+    );
   }
 }

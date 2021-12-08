@@ -4,11 +4,11 @@ import StubWallet from "../bridge-ts/stub-wallet";
 
 import BridgeFactory, { SolanaHelper } from '../bridge-ts';
 
-import type { StandaloneInstruction, TransactionAccount } from '../bridge-ts/interfaces';
+import type { StandaloneInstruction, TransactionAccount } from '../bridge-ts/types';
 import type {
   // UInt256,
   UInt160,
-} from '../bridge-ts/interfaces/types';
+} from '../bridge-ts/types';
 
 import keyAdmin from '../keys/admin-keypair.json';
 
@@ -23,7 +23,7 @@ async function initBridge(
   factory: BridgeFactory,
   helper: SolanaHelper,
 ) {
-  const ixInit = await factory.bridge.init(accAdmin);
+  const ixInit = await factory.bridge.init(accAdmin.publicKey);
   const tx = new web3.Transaction();
   tx.add(ixInit);
   // tx.recentBlockhash = await helper.getRecentBlockhash();
@@ -36,6 +36,7 @@ async function initMain(
   factory: BridgeFactory,
   helper: SolanaHelper,
 ) {
+  /*
   const pubSigner = await factory.bridge.getReceiveRequestAddress();
   await helper.transfer(new BN('10'+'000'+'000'+'000'), pubSigner, accAdmin);
 
@@ -61,10 +62,13 @@ async function initMain(
     tx0,
     accAdmin,
   );
+  */
 
-  const ixInit = await factory.main.init(pubSigner);
+  // const ixInit = await factory.main.init(pubSigner);
+  const ixInit = await factory.main.init(accAdmin.publicKey);
   // logger.logIx('ixInit', ixInit);
 
+  /*
   const sinstInit: StandaloneInstruction = {
     programId: ixInit.programId,
     accounts: ixInit.keys as TransactionAccount[],
@@ -82,8 +86,10 @@ async function initMain(
   );
   // logger.logIx('ixReceiveRequest', ixReceiveRequest);
 
+  */
   const tx = new web3.Transaction();
-  tx.add(ixReceiveRequest);
+  // tx.add(ixReceiveRequest);
+  tx.add(ixInit);
   tx.recentBlockhash = await helper.getRecentBlockhash();
 
   await helper.sendAndConfirmTransaction('init main', tx, accAdmin);
@@ -121,8 +127,7 @@ async function main() {
   console.log('Bridge settings', await bridge.fetchSettings());
 
   await initMain(accAdmin, factory, helper);
-  console.log('Bridge settings', await bridge.fetchSettings());
-
+  console.log('Portal settings', await bridge.fetchSettings());
 }
 
 process.on('beforeExit', (code) => {

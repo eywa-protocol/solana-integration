@@ -1,30 +1,40 @@
 import {
   BN,
   // Context,
-  Program,
+  // Program,
   web3,
 } from '@project-serum/anchor';
+import { TypeDef, IdlTypes } from "@project-serum/anchor/dist/cjs/program/namespace/types";
 
-import { Base } from './prg-base';
+import { PrgBase } from './prg-base';
 
 import type {
+  StandaloneInstruction,
   // UInt256,
   UInt160,
-} from './interfaces/types';
-import type {
-  IOracleRequestEvent,
-  StandaloneInstruction,
-  IBridgeSettingsAccount,
-} from './interfaces';
+} from './types';
 
 import { EywaBridge } from '../target/types/eywa_bridge';
+
+export type IdlBridge = EywaBridge;
+
+namespace NsBridge {
+  type Accounts = IdlBridge["accounts"];
+  type SettingsAccount = Accounts[0];
+  type ContractSendBindAccount = Accounts[1];
+  type ContractReceiveBindAccount = Accounts[2];
+  export type ISettingsAccount = TypeDef<SettingsAccount, IdlTypes<IdlBridge>>;
+  export type IContractReceiveBindAccount = TypeDef<ContractReceiveBindAccount, IdlTypes<IdlBridge>>;
+  export type IContractSendBindAccount = TypeDef<ContractSendBindAccount, IdlTypes<IdlBridge>>;
+}
 
 const seedPDA = Buffer.from('eywa-pda', 'utf-8');
 const seedReceiveRequest = Buffer.from('receive-request', 'utf-8');
 const seedContractReceiveBind = Buffer.from('eywa-receive-bind', 'utf-8');
+const seedContractSendBind = Buffer.from('eywa-send-bind', 'utf-8');
 
 
-export class Bridge extends Base {
+export class PrgBridge extends PrgBase<EywaBridge> {
   // private logger = new Logger();
 
   public async findSettingsAddress(): Promise<[web3.PublicKey, number]> {
@@ -49,6 +59,20 @@ export class Bridge extends Base {
     return this.getProgramAddress([ seedContractReceiveBind, contract, bridge ]);
   }
 
+  public async findContractSendBindAddress(
+    bridge: UInt160,
+    contract: UInt160,
+  ): Promise<[web3.PublicKey, number]> {
+    return this.findProgramAddress([ seedContractSendBind, contract, bridge ]);
+  }
+
+  public async getContractSendBindAddress(
+    bridge: UInt160,
+    contract: UInt160,
+  ): Promise<web3.PublicKey> {
+    return this.getProgramAddress([ seedContractSendBind, contract, bridge ]);
+  }
+
   public async findReceiveRequestAddress(): Promise<[web3.PublicKey, number]> {
     return this.findProgramAddress([seedReceiveRequest]);
   }
@@ -57,37 +81,46 @@ export class Bridge extends Base {
     return this.getProgramAddress([seedReceiveRequest]);
   }
 
+  /*
   test_emitOracleRequest(oracleRequest: IOracleRequestEvent) {
     throw new Error('Method not implemented.');
   }
+  */
 
-  public async fetchSettings(): Promise<IBridgeSettingsAccount> {
-    const [pubSettings, bump] = await this.findSettingsAddress();
-    const settings = await this.program.account.settings.fetch(pubSettings);
-    return settings as IBridgeSettingsAccount;
+  public async fetchSettings(): Promise<NsBridge.ISettingsAccount> {
+    const pubSettings = await this.getSettingsAddress();
+    return await this.program.account.settings.fetch(pubSettings);
+  }
+
+  public async fetchContractReceiveBind(
+    bridge: UInt160,
+    contract: UInt160,
+  ): Promise<NsBridge.IContractReceiveBindAccount> {
+    const pubBind = await this.getContractReceiveBindAddress(bridge, contract);
+    return this.program.account.contractReceiveBind.fetch(pubBind) as any as NsBridge.IContractReceiveBindAccount; // ???
+  }
+
+  public async fetchContractSendBind(
+    bridge: UInt160,
+    contract: UInt160,
+  ): Promise<NsBridge.IContractSendBindAccount> {
+    const pubBind = await this.getContractSendBindAddress(bridge, contract);
+    return await this.program.account.contractSendBind.fetch(pubBind) as any as NsBridge.IContractSendBindAccount; // ???
   }
 
   public async init(
-    owner: web3.Keypair,
+    pubOwner: web3.PublicKey,
   ): Promise<web3.TransactionInstruction> {
-    const [pdaSettings, bumpSettings] = await this.findSettingsAddress();
-    // this.logger.logPublicKey('pdaSettings', pdaSettings);
+    const [pubSettings, bumpSettings] = await this.findSettingsAddress();
 
-    const p = this.program as Program<EywaBridge>;
-    const ixInit = p.instruction
-    .initialize(bumpSettings, {
-      accounts: {
-        settings: pdaSettings,
-        owner: owner.publicKey,
+    return this.program.instruction.initialize(
+      bumpSettings,
+      { accounts: {
+        settings: pubSettings,
+        owner: pubOwner,
         systemProgram: web3.SystemProgram.programId,
-      },
-      signers: [owner],
-    });
-
-    // // fix payer
-    // ixInit.keys[0] = ixInit.keys[ixInit.keys.length - 1];
-    // delete ixInit.keys[ixInit.keys.length - 1];
-    return ixInit;
+      }},
+    );
   }
 
   public async addContractReceiveBind(
@@ -95,9 +128,7 @@ export class Bridge extends Base {
     addrContractFrom: UInt160,
     pubAdmin: web3.PublicKey,
   ): Promise<web3.TransactionInstruction> {
-    // const [pdaSettings, bumpSettings] = await this.findSettingsAddress();
     const pubSettings = await this.getSettingsAddress();
-    // this.logger.logPublicKey('pdaSettings', pdaSettings);
     const [
       pubContractReceiveBind,
       bumpContractReceiveBind,
@@ -106,21 +137,17 @@ export class Bridge extends Base {
       addrContractFrom,
     );
 
-    const ixInit = this.program.instruction
-    .addContractReceiveBind(bumpContractReceiveBind, addrBridgeFrom, addrContractFrom, {
-      accounts: {
+    return this.program.instruction.addContractReceiveBind(
+      bumpContractReceiveBind as any as number[],
+      addrBridgeFrom as any as number[],
+      addrContractFrom as any as number[],
+      { accounts: {
         settings: pubSettings,
         contractBind: pubContractReceiveBind,
         owner: pubAdmin,
         systemProgram: web3.SystemProgram.programId,
       },
-      // signers: [owner],
     });
-
-    // // fix payer
-    // ixInit.keys[0] = ixInit.keys[ixInit.keys.length - 1];
-    // delete ixInit.keys[ixInit.keys.length - 1];
-    return ixInit;
   }
 
   public async receiveRequest(
@@ -130,53 +157,33 @@ export class Bridge extends Base {
     sinst: StandaloneInstruction,
     proposer: web3.PublicKey,
   ): Promise<web3.TransactionInstruction> {
-    // const [pubSigner, bumpSigner] = await web3.PublicKey.findProgramAddress(
-    //   [seedReceiveRequest],
-    //   this.program.programId,
-    // );
-    // this.logger.logPublicKey('pubSigner', pubSigner);
-    // this.logger.log('bumpSigner:', bumpSigner);
+    const pubSettings = await this.getSettingsAddress();
     const pubContractReceiveBind = await this.getContractReceiveBindAddress(
       addrBridgeFrom,
       addrContractFrom,
     );
-
     const pubSigner = await this.getReceiveRequestAddress();
 
-    const accounts = {
-      settings: await this.getSettingsAddress(),
-      requestId,
-      proposer,
-      contractBind: pubContractReceiveBind,
-    };
-
-    const remainingAccounts = [
-      { pubkey: sinst.programId, isWritable: false, isSigner: false },
-      { pubkey: pubSigner, isWritable: false, isSigner: false },
-      ...(sinst.accounts.map((value) => ({
-        ...value,
-        isSigner: value.pubkey.equals(pubSigner) ? false : value.isSigner,
-      })) as web3.AccountMeta[] ),
-    ];
-
-    // Array.prototype.slice.call(addrBridgeFrom, 0) as number[],
-
-    const p = this.program as Program<EywaBridge>;
-    // const ctx: Context = {
-    //   accounts,
-    //   remainingAccounts,
-    // };
-    const ixReceiveRequest = await p.instruction
-    .receiveRequest(
+    return this.program.instruction.receiveRequest(
       addrBridgeFrom as any as number[],
       sinst,
       {
-        accounts,
-        remainingAccounts,
+        accounts: {
+          settings: pubSettings,
+          requestId,
+          proposer,
+          contractBind: pubContractReceiveBind,
+        },
+        remainingAccounts: [
+          { pubkey: sinst.programId, isWritable: false, isSigner: false },
+          { pubkey: pubSigner, isWritable: false, isSigner: false },
+          ...(sinst.accounts.map((value) => ({
+            ...value,
+            isSigner: value.pubkey.equals(pubSigner) ? false : value.isSigner,
+          })) as web3.AccountMeta[] ),
+        ],
       },
     );
-
-    return ixReceiveRequest as web3.TransactionInstruction;
   }
 
   public async testOracleRequest(
@@ -188,9 +195,7 @@ export class Bridge extends Base {
     pubSigner: web3.PublicKey,
   ): Promise<web3.TransactionInstruction> {
 
-    const p = this.program as Program<EywaBridge>;
-    const ixTestOracleRequest = await p.instruction
-    .testOracleRequest(
+    return this.program.instruction.testOracleRequest(
       // addrBridgeFrom as any as number[],
       requestId, // : Pubkey,
       selector, // : Vec<u8>,
@@ -200,6 +205,5 @@ export class Bridge extends Base {
     { accounts: {
       signer: pubSigner,
     }});
-    return ixTestOracleRequest as web3.TransactionInstruction;
   }
 }

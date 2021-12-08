@@ -87,6 +87,16 @@ deploy-solana-local:
 	solana program deploy -v -C keys/config-local.yml --max-len 3000000 --program-id "./target/deploy/eywa_portal_synthesis-keypair.json" "./target/deploy/eywa_portal_synthesis.so"
 	solana program deploy -v -C keys/config-local.yml --max-len 2000000 --program-id "./target/deploy/test_token_faucet-keypair.json" "./target/deploy/test_token_faucet.so"
 
+deploy-solana-devnet:
+	solana program deploy -v -C keys/config-devnet.yml --max-len 2000000 --program-id "./target/deploy/eywa_bridge-keypair.json" "./target/deploy/eywa_bridge.so"
+	solana program deploy -v -C keys/config-devnet.yml --max-len 3000000 --program-id "./target/deploy/eywa_portal_synthesis-keypair.json" "./target/deploy/eywa_portal_synthesis.so"
+	solana program deploy -v -C keys/config-devnet.yml --max-len 2000000 --program-id "./target/deploy/test_token_faucet-keypair.json" "./target/deploy/test_token_faucet.so"
+
+deploy-solana-testnet:
+	solana program deploy -v -C keys/config-testnet.yml --max-len 2000000 --program-id "./target/deploy/eywa_bridge-keypair.json" "./target/deploy/eywa_bridge.so"
+	solana program deploy -v -C keys/config-testnet.yml --max-len 3000000 --program-id "./target/deploy/eywa_portal_synthesis-keypair.json" "./target/deploy/eywa_portal_synthesis.so"
+	solana program deploy -v -C keys/config-testnet.yml --max-len 2000000 --program-id "./target/deploy/test_token_faucet-keypair.json" "./target/deploy/test_token_faucet.so"
+
 init-js:
 	npm i -g @project-serum/anchor-cli
 	npm i
@@ -94,9 +104,18 @@ init-js:
 
 configure-solana-contracts-local:
 	npm run deploy:init:local
-	npm run set:owner:local
 	npm run token:init:local
 	npm run token:init:local2
+
+configure-solana-contracts-devnet:
+	npm run deploy:init:devnet
+	npm run token:init:devnet
+	npm run token:init:devnet2
+
+configure-solana-contracts-testnet:
+	npm run deploy:init:testnet
+	npm run token:init:testnet
+	npm run token:init:testnet2
 
 test-serializer:
 	# go test -v ./test/01_serializer_test.go
@@ -109,7 +128,7 @@ test:
 
 test2:
 	solana program deploy -v --max-len 2000000 --program-id "./target/deploy/eywa_bridge-keypair.json" "./target/deploy/eywa_bridge.so"
-	sleep 5
+	sleep 20
 	go test -v ./test -run Test_oracle_request
 
 gen_proto:

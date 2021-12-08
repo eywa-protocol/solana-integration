@@ -44,7 +44,7 @@ export const MintSyntheticTokenTests = ({
 
   const helper = new SolanaHelper(provider);
   const factory = new BridgeFactory(provider.connection);
-  const { main } = factory;
+  const { main, bridge } = factory;
 
   before(async () => {
     accAdmin = (await admin.createPromise()) as web3.Keypair;
@@ -62,7 +62,7 @@ export const MintSyntheticTokenTests = ({
     const realToken = /* 0x */"1234567890123456789012345678901234567890";
     // const accTo = web3.Keypair.generate();
 
-    const txId = /* 0x */"1234567890123456789012345678901234567890123456789012";
+    const txId = /* 0x */"1234567890123456789012345678901234567890123456789012345678901234";
 
     const [pubkeyMint, bumpSeedMint] = await PublicKey.findProgramAddress([
       // Buffer.from(anchor.utils.bytes.utf8.encode("mint-synt")),
@@ -82,7 +82,8 @@ export const MintSyntheticTokenTests = ({
       bumpSynthesizeState,
     ] = await PublicKey.findProgramAddress([
       Buffer.from('eywa-synthesize-state', 'utf-8'),
-      Buffer.from(realToken, 'hex'),
+      // Buffer.from(realToken, 'hex'),
+      Buffer.from(txId, 'hex'),
     ], program.programId);
     logger.logPublicKey('pubSynthesizeState', pubSynthesizeState);
     // logger.log('Buffer.from', Buffer.from('eywa-synthesize-request', 'utf-8').toString('utf8'));
@@ -99,11 +100,12 @@ export const MintSyntheticTokenTests = ({
 
     const walUser = await mintAccount.createAssociatedTokenAccount(accAdmin.publicKey);
     logger.logPublicKey('walUser', walUser);
-    logger.logPublicKey('thisProgram', program.programId);
+    // logger.logPublicKey('thisProgram', program.programId);
 
     const ixMintSyntheticToken = await program.instruction.mintSyntheticToken(
-      bumpSeedMint, // : u8,
-      bumpSynthesizeState, // : u8,
+      Buffer.from(txId, 'hex'), // txId,
+      // bumpSeedMint, // : u8,
+      bumpSynthesizeState, // : u8, // bumpRequest,
       // bumpSeedData, // : u8,
       // new BN(realToken, 16).toArray(), // U160
       // new BN(txId, 16).toArray(), // H256
@@ -113,16 +115,17 @@ export const MintSyntheticTokenTests = ({
     {
       accounts: {
         settings: await main.getSettingsAddress(),
-        synthesizeState: pubSynthesizeState,
-        to: walUser, // accTo.publicKey,
         mintSynt: pubkeyMint,
         mintData: pubkeyData,
-        thisProgram: program.programId,
+        synthesizeState: pubSynthesizeState,
+        to: walUser, // accTo.publicKey,
+        // thisProgram: program.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: web3.SystemProgram.programId,
         rent: web3.SYSVAR_RENT_PUBKEY,
-        owner: accAdmin.publicKey,
+        // owner: accAdmin.publicKey,
         // bridgeSigner: accAdmin.publicKey,
+        bridge: accAdmin.publicKey, // bridge.getSettingsAddress(),
       },
     });
 

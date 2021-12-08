@@ -42,7 +42,7 @@ describe('eywa-portal-solana', () => {
     await helper.transfer(new BN('10000000000000000'), accAdmin.publicKey);
 
     const tx = new web3.Transaction();
-    tx.add(await bridge.init(accAdmin));
+    tx.add(await bridge.init(accAdmin.publicKey));
     tx.recentBlockhash = await helper.getRecentBlockhash();
     await helper.sendAndConfirmTransaction(
       'Initialize bridge',
@@ -169,29 +169,15 @@ describe('eywa-portal-solana', () => {
       accUser
     );
 
-    // const parsedTx = await provider.connection.getParsedConfirmedTransaction(
-    //   signature,
-    //   "finalized"
-    // );
-
-    // if (parsedTx === null) {
-    //   expect(parsedTx).not.to.be.null;
-    //   return;
-    // }
-
-    // const { signatures } = parsedTx.transaction;
-    // expect(signatures[0]).to.eq(await signature);
-
     logger.log("signature:", signature);
     // logger.log("parsedTx:", parsedTx);
 
     logger.log('synthesizeRequestAccount');
-    logger.log(await main.fetchSynthesizeRequestAccountInfo(token.publicKey));
+    // logger.log(await main.fetchSynthesizeRequestAccountInfo(token.publicKey));
+    logger.log(await main.fetchTxStateAccountInfo(token.publicKey));
 
     logger.log('fetch pubSynthesizeRequest');
-    const dataSynthesizeRequest = await main.fetchTxState(
-      token.publicKey
-    );
+    const dataSynthesizeRequest = await main.fetchTxState(token.publicKey);
 
     // dataSynthesizeRequest;
     logger.log(dataSynthesizeRequest);
@@ -214,15 +200,11 @@ describe('eywa-portal-solana', () => {
     );
 
     logger.log('synthesizeRequestAccount');
-    logger.log(await main.fetchTxState(
-      token.publicKey,
-    ));
+    logger.log(await main.fetchTxState(token.publicKey));
 
     const settings = await main.fetchSettings();
     logger.log('settings');
     logger.log(settings);
-
-    // assert.ok(synthesizeRequestAccount.data.slice(120, 128)[0] == 2)
   });
 
   it.skip('Portal unsynthesize', async () => {

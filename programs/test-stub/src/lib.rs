@@ -6,7 +6,8 @@ use anchor_lang::{
     },
 };
 
-declare_id!("DMzorxwVcxZR8gat6YiSKs87nC3Ew1MLupcsJDRpv8Ce");
+
+std::include!("pid.in");
 
 #[program]
 pub mod test_stub {

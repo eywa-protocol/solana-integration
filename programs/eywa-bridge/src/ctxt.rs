@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::state as state;
 
-// pub const PDA_MASTER_SEED: &[u8] = b"eywa-pda";
+
 pub const PDA_RECEIVE_REQUEST_SEED: &[u8] = b"receive-request";
 
 
@@ -16,8 +16,6 @@ pub struct Initialize<'info> {
         payer = owner,
         seeds = [ state::Settings::SEED.as_ref() ],
         bump = bump_seed,
-        // space = state::Settings::LEN,
-        // space = 10000,
     )]
     pub settings: Account<'info, state::Settings>,
     pub owner: Signer<'info>,
@@ -45,7 +43,6 @@ pub struct AddContractSendBind<'info> {
             &opposite_bridge[..]
         ],
         bump = bump_seed,
-        // space = 10000,
     )]
     pub contract_bind: Account<'info, state::ContractSendBind>,
     pub bind_authority: AccountInfo<'info>,
@@ -76,11 +73,8 @@ pub struct AddContractReceiveBind<'info> {
             &opposite_bridge[..]
         ],
         bump = bump_seed,
-        // space = 10000,
     )]
     pub contract_bind: Account<'info, state::ContractReceiveBind>,
-    // pub bind_authority: AccountInfo<'info>,
-    // pub contract: AccountInfo<'info>,
     pub owner: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
@@ -109,13 +103,7 @@ pub struct TransmitRequest<'info> {
         bump = settings.bump
     )]
     pub settings: Account<'info, state::Settings>,
-    #[account(signer)]
-    pub signer: AccountInfo<'info>,
-    // pub signer: Signer<'info>,
-    // #[account(signer, mut)]
-    // pub nonce_master_account: AccountInfo<'info>,
-    // #[account(mut)]
-    // pub bridge_nonce: AccountInfo<'info>,
+    pub signer: Signer<'info>,
     pub system_program: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
 }

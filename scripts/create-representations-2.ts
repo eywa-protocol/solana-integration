@@ -24,7 +24,7 @@ async function initFaucet(
   factory: BridgeFactory,
   helper: SolanaHelper,
 ) {
-  const ixInit = await factory.faucet.init(accAdmin);
+  const ixInit = await factory.faucet.init(accAdmin.publicKey);
   const tx = new web3.Transaction();
   tx.add(ixInit);
   tx.recentBlockhash = await helper.getRecentBlockhash();
@@ -36,6 +36,7 @@ async function createReals(
   accAdmin: web3.Keypair,
   factory: BridgeFactory,
   helper: SolanaHelper,
+  connection: web3.Connection,
 ) {
 
   await initFaucet(
@@ -63,7 +64,8 @@ async function createReals(
     }
 
     const pubToken = await factory.faucet.getMintAddress(symbol);
-    logger.logPublicKey(`token${ symbol }`, pubToken);
+    logger.logPublicKey(`token(${ symbol })`, pubToken);
+    logger.log(await connection.getAccountInfo(pubToken));
     logger.log(await factory.faucet.fetchMintData(symbol));
 
     const tx = new web3.Transaction();
@@ -97,7 +99,7 @@ async function main() {
   const helper = new SolanaHelper(provider);
   const factory = new BridgeFactory(connection);
 
-  await createReals(accAdmin, factory, helper);
+  await createReals(accAdmin, factory, helper, connection);
 }
 
 

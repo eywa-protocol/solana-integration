@@ -15,16 +15,16 @@ import BridgeFactory, { SolanaHelper } from '../bridge-ts';
 import type {
   StandaloneInstruction,
   TransactionAccount,
-} from '../bridge-ts/interfaces';
+} from '../bridge-ts/types';
 import type {
   // UInt256,
   UInt160,
-} from '../bridge-ts/interfaces/types';
+} from '../bridge-ts/types';
 
-// import { Logger } from '../utils-ts';
+import { Logger } from '../utils-ts';
 
 
-// const logger = new Logger();
+const logger = new Logger();
 
 
 describe('bridge', () => {
@@ -45,8 +45,8 @@ describe('bridge', () => {
   });
 
   const INIT_BRIDGE = 'Initialize bridge'
-  it.skip(INIT_BRIDGE, async () => {
-    const ixInit = await bridge.init(accAdmin);
+  it(INIT_BRIDGE, async () => {
+    const ixInit = await bridge.init(accAdmin.publicKey);
     // logger.logIx('ixInit', ixInit);
     const tx = new web3.Transaction();
     tx.add(ixInit);
@@ -54,15 +54,15 @@ describe('bridge', () => {
 
     await helper.sendAndConfirmTransaction(INIT_BRIDGE, tx, accAdmin);
 
-    const pubSettings = await bridge.getSettingsAddress();
+    // const pubSettings = await bridge.getSettingsAddress();
     // logger.logPublicKey('pubSettings', pubSettings);
-    const accountInfo = await provider.connection.getAccountInfo(pubSettings);
+    // const accountInfo = await provider.connection.getAccountInfo(pubSettings);
     // logger.accountInfo('settings accountInfo', accountInfo);
     const settings = await bridge.fetchSettings();
-    // logger.logState('settings', settings);
+    logger.logState('settings', settings);
   });
 
-  it.skip('Hello World', async () => {
+  it('Hello World', async () => {
     const addrBridgeFrom: UInt160 = Buffer.from(
       '1122334455667788990011223344556677889900',
       'hex',
@@ -128,7 +128,7 @@ describe('bridge', () => {
     console.log(event);
   });
 
-  it.skip('Hello World Signed', async () => {
+  it('Hello World Signed', async () => {
     // logger.logPublicKey('accAdmin', accAdmin.publicKey);
     // logger.logPublicKey('pidBridge', factory.bridge.pid);
     // logger.logPublicKey('provider', provider.wallet.publicKey);
@@ -176,20 +176,22 @@ describe('bridge', () => {
   });
 
   const INIT_SYNTHESIS = 'Init synthesis';
-  it.skip(INIT_SYNTHESIS, async () => {
+  it(INIT_SYNTHESIS, async () => {
     // logger.logPublicKey('accAdmin', accAdmin.publicKey);
     // logger.logPublicKey('pidBridge', factory.bridge.pid);
     // logger.logPublicKey('provider', provider.wallet.publicKey);
 
-    const pubSigner = await bridge.getReceiveRequestAddress();
+    // const pubSigner = await bridge.getReceiveRequestAddress();
 
     // logger.logPublicKey('pubSigner', pubSigner);
     // logger.log('bumpSigner:', bumpSigner);
-    await helper.transfer(new BN('10000000000000000'), pubSigner);
+    // await helper.transfer(new BN('10000000000000000'), pubSigner);
 
-    const ixInit = await main.init(pubSigner);
+    // const ixInit = await main.init(pubSigner);
+    const ixInit = await main.init(accAdmin.publicKey);
     // logger.logIx('ixInit', ixInit);
 
+    /*
     const sinstInit: StandaloneInstruction = {
       programId: ixInit.programId,
       accounts: ixInit.keys as TransactionAccount[],
@@ -206,9 +208,11 @@ describe('bridge', () => {
       accAdmin.publicKey,
     );
     // logger.logIx('ixReceiveRequest', ixReceiveRequest);
+    */
 
     const tx = new web3.Transaction();
-    tx.add(ixReceiveRequest);
+    // tx.add(ixReceiveRequest);
+    tx.add(ixInit);
     tx.recentBlockhash = await helper.getRecentBlockhash();
 
     await helper.sendAndConfirmTransaction(INIT_SYNTHESIS, tx, accAdmin);
@@ -217,17 +221,22 @@ describe('bridge', () => {
     // expect(owner).eq(accAdmin.publicKey.toBase58());
 
     console.log(await main.fetchSettings());
-    const ixSetOwner = await main.setOwner(accAdmin.publicKey);
+    /*
+    const ixSetOwner = await main.setOwner(
+      accAdmin.publicKey,
+      accAdmin.publicKey,
+    );
     const tx2 = new web3.Transaction();
     tx2.add(ixSetOwner);
     tx2.recentBlockhash = await helper.getRecentBlockhash();
     await helper.sendAndConfirmTransaction('setOwner', tx2, accAdmin);
     console.log(await main.fetchSettings());
+    */
     console.log(accAdmin.publicKey.toBuffer().toString('hex'));
   });
 
   const MINT_SYNTHETIC_TOKEN = 'Mint Synthetic Token';
-  it.skip(MINT_SYNTHETIC_TOKEN, async () => {
+  it(MINT_SYNTHETIC_TOKEN, async () => {
     // logger.logPublicKey('accAdmin', accAdmin.publicKey);
     // logger.logPublicKey('pidBridge', factory.bridge.pid);
     // logger.logPublicKey('provider', provider.wallet.publicKey);
